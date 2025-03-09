@@ -1,10 +1,10 @@
 {
   "git_path": "../",
-  "module_path": "../bitrix/modules/awz.bxorm/",
-  "updates_path": "../update/",
-  "output_path": "../dist/",
-  "readme_file": "../README.md",
-  "changelog_file": "../CHANGELOG.md",
+  "module_path": "../../bitrix/modules/awz.bxorm/",
+  "updates_path": "../../update/",
+  "output_path": "../../dist/",
+  "readme_file": "../../README.md",
+  "changelog_file": "../../CHANGELOG.md",
   "lang_prefix": ["AWZ_BXORM_"],
   "disabled_lang": [
     "AWZ_PARTNER_NAME", "AWZ_PARTNER_URI", "ACCESS_DENIED",
