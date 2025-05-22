@@ -45,7 +45,7 @@ class MethodsEdit extends IForm implements IParams {
         $defValue = isset($this->fieldsValues[$name]) ? $this->fieldsValues[$name] : "";
 
         if(!$this->saved) {
-            $value = (isset($_REQUEST[$name]) && array_key_exists($name, $_REQUEST)) ? $_REQUEST[$name] : $defValue;
+            $value = (isset($_REQUEST[$name]) && array_key_exists($name, $_REQUEST)) ? htmlspecialcharsEx($_REQUEST[$name]) : $defValue;
         }else{
             $value = (isset($this->fieldsValues[$name])) ? $this->fieldsValues[$name] : "";
         }
