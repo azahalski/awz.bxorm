@@ -53,6 +53,12 @@ class AppAuth extends BaseFilter {
         if(!$key){
             $key = $this->getAction()->getController()->getRequest()->get('key');
         }
+        if(!$key){
+            $key = str_replace(["Token ","Bearer "],["",""],
+                $this->getAction()->getController()->getRequest()->getHeader('authorization') ?? ""
+            );
+        }
+
         if(!$appId){
             $appId = $this->getAction()->getController()->getRequest()->get('app');
         }

@@ -13,25 +13,19 @@ class awz_bxorm extends CModule
     var $MODULE_VERSION_DATE;
     var $MODULE_NAME;
     var $MODULE_DESCRIPTION;
-    var $PARTNER_NAME;
-    var $PARTNER_URI;
-    var $MODULE_GROUP_RIGHTS = "N";
 
     public function __construct()
     {
         $arModuleVersion = array();
         include(__DIR__.'/version.php');
 
-        $dirs = explode('/',dirname(__DIR__ . '../'));
-        $this->MODULE_ID = array_pop($dirs);
-        unset($dirs);
+        $this->MODULE_VERSION = $arModuleVersion["VERSION"];
+        $this->MODULE_VERSION_DATE = $arModuleVersion["VERSION_DATE"];
 
-		$this->MODULE_VERSION = $arModuleVersion["VERSION"];
-		$this->MODULE_VERSION_DATE = $arModuleVersion["VERSION_DATE"];
         $this->MODULE_NAME = Loc::getMessage("AWZ_BXORM_MODULE_NAME");
         $this->MODULE_DESCRIPTION = Loc::getMessage("AWZ_BXORM_MODULE_DESCRIPTION");
         $this->PARTNER_NAME = Loc::getMessage("AWZ_PARTNER_NAME");
-        $this->PARTNER_URI = Loc::getMessage("AWZ_PARTNER_URI");
+        $this->PARTNER_URI = "https://zahalski.dev/";
 		return true;
 	}
 
@@ -47,6 +41,11 @@ class awz_bxorm extends CModule
 
         ModuleManager::RegisterModule($this->MODULE_ID);
 
+        $APPLICATION->IncludeAdminFile(
+            Loc::getMessage("AWZ_BXORM_MODULE_NAME"),
+            $_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/'. $this->MODULE_ID .'/install/solution.php'
+        );
+
         return true;
     }
 
@@ -59,7 +58,6 @@ class awz_bxorm extends CModule
             $APPLICATION->IncludeAdminFile(Loc::getMessage('AWZ_BXORM_INSTALL_TITLE'), $_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/'. $this->MODULE_ID .'/install/unstep.php');
         }
         elseif($step == 2) {
-            //проверяем условие
             if($_REQUEST['save'] != 'Y' && !isset($_REQUEST['save'])) {
                 $this->UnInstallDB();
             }
@@ -67,8 +65,11 @@ class awz_bxorm extends CModule
             $this->UnInstallEvents();
             $this->deleteAgents();
 
-            ModuleManager::UnRegisterModule($this->MODULE_ID);
+            if($_REQUEST['saveopts'] != 'Y' && !isset($_REQUEST['saveopts'])) {
+                \Bitrix\Main\Config\Option::delete($this->MODULE_ID);
+            }
 
+            ModuleManager::UnRegisterModule($this->MODULE_ID);
             return true;
         }
     }
@@ -84,7 +85,6 @@ class awz_bxorm extends CModule
             $APPLICATION->ThrowException(implode("", $this->errors));
             return $this->errors;
         }
-        return true;
     }
 
     function UnInstallDB()
@@ -132,6 +132,7 @@ class awz_bxorm extends CModule
     }
 
     function deleteAgents() {
+        CAgent::RemoveModuleAgents($this->MODULE_ID);
         return true;
     }
 
