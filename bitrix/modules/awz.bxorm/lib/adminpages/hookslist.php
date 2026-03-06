@@ -26,6 +26,7 @@ class HooksList extends IList implements IParams {
         $domain = Application::getInstance()->getContext()->getServer()->getHttpHost();
         $baseApiUrl = 'https://'.$domain.'/bitrix/services/main/ajax.php?action=awz:bxorm.api.hook.call&app='.$row->arRes['ID'].'&key='.$row->arRes['TOKEN'].'&method=';
         $baseApiUrl2 = 'https://'.$domain.'/bitrix/services/main/ajax.php?action=awz:bxorm.api.hook.methods&app='.$row->arRes['ID'].'&key='.$row->arRes['TOKEN'];
+        $baseApiUrlMcp = 'https://'.$domain.'/bitrix/services/main/ajax.php?action=awz:bxorm.api.hook.callrpc&app='.$row->arRes['ID'].'&mcprpc=2.0';
 
         $methods = [];
         if(!empty($row->arRes['METHODS'])){
@@ -41,7 +42,7 @@ class HooksList extends IList implements IParams {
             }
         }
 
-        $row->AddViewField('METHODS',Loc::getMessage('AWZ_BXORM_HOOKS_LIST_WEBHOOK').': <a target="_blank" href="'.$baseApiUrl.'">'.$baseApiUrl.'</a><br>'.Loc::getMessage('AWZ_BXORM_HOOKS_LIST_WEBHOOK_2').': <a target="_blank" href="'.$baseApiUrl2.'">'.$baseApiUrl2.'</a><br>'.implode(', ',$methods));
+        $row->AddViewField('METHODS','rpc: <a target="_blank" href="'.$baseApiUrlMcp.'">rpc 2.0</a><br>'.Loc::getMessage('AWZ_BXORM_HOOKS_LIST_WEBHOOK').': <a target="_blank" href="'.$baseApiUrl.'">'.$baseApiUrl.'</a><br>'.Loc::getMessage('AWZ_BXORM_HOOKS_LIST_WEBHOOK_2').': <a target="_blank" href="'.$baseApiUrl2.'">'.$baseApiUrl2.'</a><br>'.implode(', ',$methods));
 
         ///bitrix/services/main/ajax.php?action=awz:bxorm.api.hook.call&app=1&key=k3ZaH73tSLx9I6us8C&method=
 

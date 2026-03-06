@@ -52,40 +52,76 @@ class CheckMethod extends BaseFilter {
         }
         $methodsKeys = [];
         if($method){
-            $method = str_replace('.json','',$method);
-            $methodsKeys = explode(".",preg_replace('/([^0-9a-z.])/','', $method));
+
+            $json = $this->getAction()->getController()->getRequest()->get('json');
+            if(is_array($json) && isset($json['params']['name'])){
+                $methodAr = explode("/", $method);
+                $methodAr[count($methodAr)-1] = $json['params']['name'];
+                $method = implode("/", $methodAr);
+            }
+
+            $method = \Awz\BxOrm\Helper::replaceMethod($method, $appId);
+            $method = strtolower(str_replace('.json','',$method));
+            $methodsKeys = explode(".",preg_replace('/([^0-9a-z.\/])/','', $method));
             if(!is_array($methodsKeys)) $checkMethod = false;
-            if(is_array($methodsKeys) && count($methodsKeys)!=2) {
+            if(is_array($methodsKeys) && (count($methodsKeys)!=2)) {
                 $checkMethod = false;
             }
         }
 
         $METHOD_ID = 0;
+        $METHOD_CODE = '';
         if($checkMethod !== false){
             $hookData = HooksTable::getRowById($appId);
-            $methods = [];
+            $methodsAppActive = [];
             if(!empty($hookData['METHODS'])){
+                /* ib = $methodsKeys[0]
+                 * $methodId | request method |
+                 * 1         | ib.*           | ib.'.*'
+                 * 1.add     | ib.add         | ib.'.'.$methodsKeys[1]
+                 * */
                 foreach($hookData['METHODS'] as $methodId){
-                    $methods[] = $methodId;
+
+                    $methodId = strtolower($methodId);
+                    $tmp = explode('.',$methodId);
+
+                    $methodsAppActive[$tmp[0]] = $methodsAppActive[$tmp[0]] ?? [];
+
+                    if(isset($tmp[1])){
+                        $methodsAppActive[$tmp[0]][] = $tmp[1];
+                    }else{
+                        $methodsAppActive[$tmp[0]][] = '*';
+                    }
                 }
             }
-            if(!empty($methods)){
+            //print_r($methodsAppActive);
+            //die();
+            if(!empty($methodsAppActive)){
                 $methodsParamsRes = MethodsTable::getList([
                     'select'=>['*'],
-                    'filter'=>['=ID'=>$methods, '=CODE'=>$methodsKeys[0], '=ACTIVE'=>'Y']
+                    'filter'=>['=ID'=>array_keys($methodsAppActive), '=CODE'=>$methodsKeys[0], '=ACTIVE'=>'Y']
                 ]);
                 while($data = $methodsParamsRes->fetch()){
-                    //echo'<pre>';print_r($data);echo'</pre>';
-                    //die();
+
                     if($checkMethod === true) continue;
-                    if(!empty($data['PARAMS']['methods'])){
-                        foreach($data['PARAMS']['methods'] as $code=>$active){
-                            if($active != 'Y') continue;
-                            if($methodsKeys[1] === $code){
-                                $checkMethod = true;
-                                $METHOD_ID = $data['ID'];
-                                break;
-                            }
+
+                    $appRight = $methodsAppActive[$data['ID']] ?? [];
+                    if(empty($appRight)) continue;
+                    if(empty($data['PARAMS']['methods'])) continue;
+
+                    foreach($data['PARAMS']['methods'] as $code=>$active){
+                        if($active != 'Y') continue;
+                        if(
+                            ($methodsKeys[1] === $code)
+                            && (
+                                in_array($code, $appRight)
+                                || in_array('*', $appRight)
+                            )
+                        ){
+                            $checkMethod = true;
+                            $METHOD_ID = $data['ID'];
+                            $METHOD_CODE = $code;
+                            break;
                         }
                     }
                 }
@@ -105,6 +141,7 @@ class CheckMethod extends BaseFilter {
                 $scopeCustomData = $scope->getCustomData();
                 if($scopeCustomData instanceof \Awz\BxOrm\Api\Scopes\Parameters){
                     $scopeCustomData->set('METHOD_ID', $METHOD_ID);
+                    $scopeCustomData->set('METHOD_CODE', $METHOD_CODE);
                 }
             }
         }

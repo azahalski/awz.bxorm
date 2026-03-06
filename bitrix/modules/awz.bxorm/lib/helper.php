@@ -16,6 +16,8 @@ Loc::loadMessages(__FILE__);
 
 class Helper {
 
+    const MCP_PROTO_VERSION_DEFAULT = '2.0';
+
     const CONTROLLER_TYPE_AWZ = 'awz';
     const CONTROLLER_TYPE_BX = 'bitrix';
 
@@ -36,6 +38,9 @@ class Helper {
                     }
                 }
                 $methodsList[$data['ID']] = $data['CODE'].'.('.implode('|',$active).') - '.$data['NAME'];
+                foreach($active as $code){
+                    $methodsList[$data['ID'].'.'.$code] = ' - '.$data['CODE'].'.'.$code;
+                }
             }
         }
         return $methodsList;
@@ -129,6 +134,35 @@ class Helper {
             return true;
         }
         return false;
+    }
+
+    public static function replaceMethod($method, $appId){
+
+        static $replaceMethod;
+        if(!is_array($replaceMethod)) $replaceMethod = [];
+        if(!isset($replaceMethod[$method])){
+            $replaceMethod[$method] = strtolower(preg_replace('/[^0-9a-zA-Z.\/]/is','',$method));
+            if(strpos($method, '.')===false){
+                $mcpData = \Awz\BxOrm\HooksTable::getRowById($appId);
+                if($mcpData && !empty($mcpData['METHODS'])){
+                    foreach($mcpData['METHODS'] as $v){
+                        $v = strtolower($v);
+                        $initFind = str_replace(['.initialize'],'',$v);
+                        if($initFind == intval($initFind)){
+                            $methodData = \Awz\BxOrm\MethodsTable::getRowById(
+                                str_replace(['.initialize'],'',$v)
+                            );
+                            if($methodData && ($methodData['ACTIVE']=='Y')){
+                                $replaceMethod[$method] = $methodData['CODE'].'.'.preg_replace('/[^0-9a-zA-Z.\/]/is','',$method);
+                                break;
+                            }
+                        }
+
+                    }
+                }
+            }
+        }
+        return $replaceMethod[$method];
     }
 
 }

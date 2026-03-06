@@ -53,10 +53,22 @@ class AppAuth extends BaseFilter {
         if(!$key){
             $key = $this->getAction()->getController()->getRequest()->get('key');
         }
-        if(!$key){
-            $key = str_replace(["Token ","Bearer "],["",""],
-                $this->getAction()->getController()->getRequest()->getHeader('authorization') ?? ""
-            );
+        $authHeader = $this->getAction()->getController()->getRequest()->getHeader('authorization') ?? "";
+
+        try{
+            $headers = apache_request_headers();
+            if(!$authHeader && is_array($headers) && isset($headers['Authorization']) && $headers['Authorization']){
+                $authHeader = $headers['Authorization'];
+            }
+            if(!$authHeader && is_array($headers) && isset($headers['authorization']) && $headers['authorization']){
+                $authHeader = $headers['authorization'];
+            }
+        }catch (\Exception $e)
+        {
+
+        }
+        if(!$key && $authHeader){
+            $key = str_replace(["Token ","Bearer "],["",""], $authHeader);
         }
 
         if(!$appId){
