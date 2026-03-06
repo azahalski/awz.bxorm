@@ -1,0 +1,1 @@
+- добавлен mcp сервер; - добавлен обработчик onEndFinalizeResponse.
