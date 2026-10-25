@@ -21,6 +21,166 @@ class Helper {
     const CONTROLLER_TYPE_AWZ = 'awz';
     const CONTROLLER_TYPE_BX = 'bitrix';
 
+    const MCP_METHOD_CODE = 'mcp';
+    const MCP_ENTITY = '\Awz\BxOrm\Api\Controller\Mcp\App';
+    const MCP_HOOK_NAME = 'MCP AI (авто)';
+
+    /**
+     * Действия MCP-контроллера, включаемые в методе для ИИ
+     * @return string[]
+     */
+    public static function getMcpActions(): array
+    {
+        return [
+            'initialize',
+            'ping',
+            'tools/list',
+            'tools/call',
+            'resources/list',
+            'resources/read',
+            'prompts/list',
+            'prompts/get',
+            'tools/envinfo',
+            'tools/phpinfo',
+            'tools/cmsinfo',
+            'tools/dbinfo',
+            'tools/processinfo',
+            'tools/log_get',
+            'tools/log_set',
+            'tools/file_get'
+        ];
+    }
+
+    /**
+     * ID метода MCP-сервера (0 - если не создан)
+     */
+    public static function getMcpMethodId(): int
+    {
+        $r = MethodsTable::getList([
+            'select'=>['ID'],
+            'filter'=>['=CODE'=>self::MCP_METHOD_CODE, '=ENTITY'=>self::MCP_ENTITY],
+            'limit'=>1
+        ])->fetch();
+        return $r ? (int)$r['ID'] : 0;
+    }
+
+    /**
+     * Хук MCP-сервера (null - если не создан)
+     */
+    public static function getMcpHook(): ?array
+    {
+        $r = HooksTable::getList([
+            'filter'=>['=NAME'=>self::MCP_HOOK_NAME],
+            'limit'=>1
+        ])->fetch();
+        return $r ?: null;
+    }
+
+    /**
+     * Создает (или обновляет) метод и хук MCP-сервера для подключения ИИ
+     */
+    public static function createMcpApp(): Result
+    {
+        $result = new Result();
+
+        $methodId = self::getMcpMethodId();
+        $methodFields = [
+            'NAME' => 'MCP: инструменты для ИИ',
+            'CODE' => self::MCP_METHOD_CODE,
+            'ENTITY' => self::MCP_ENTITY,
+            'MODULES' => ['main'],
+            'ACTIVE' => 'Y',
+            'PARAMS' => [
+                'methods' => array_fill_keys(self::getMcpActions(), 'Y'),
+                'fields' => []
+            ]
+        ];
+
+        if($methodId){
+            $r = MethodsTable::update($methodId, $methodFields);
+        }else{
+            $r = MethodsTable::add($methodFields);
+            $methodId = (int)$r->getId();
+        }
+        if(!$r->isSuccess()){
+            $result->addErrors($r->getErrors());
+            return $result;
+        }
+
+        $hookData = self::getMcpHook();
+        $hookFields = [
+            'NAME' => self::MCP_HOOK_NAME,
+            'TOKEN' => self::generateToken(),
+            'ACTIVE' => 'Y',
+            'METHODS' => [$methodId]
+        ];
+        if($hookData){
+            $r = HooksTable::update($hookData['ID'], $hookFields);
+            $appId = (int)$hookData['ID'];
+        }else{
+            $r = HooksTable::add($hookFields);
+            $appId = (int)$r->getId();
+        }
+        if(!$r->isSuccess()){
+            $result->addErrors($r->getErrors());
+            return $result;
+        }
+
+        $result->setData([
+            'APP_ID' => $appId,
+            'TOKEN' => $hookFields['TOKEN'],
+            'METHOD_ID' => $methodId,
+            'URL' => self::getMcpUrl($appId)
+        ]);
+        return $result;
+    }
+
+    /**
+     * Удаляет метод и хуки MCP-сервера
+     */
+    public static function deleteMcpApp(): Result
+    {
+        $result = new Result();
+
+        $methodId = self::getMcpMethodId();
+        if(!$methodId){
+            $result->addError(new Error(Loc::getMessage('AWZ_BXORM_HELPER_MCP_NOT_FOUND')));
+            return $result;
+        }
+
+        $r = HooksTable::getList(['filter'=>['=NAME'=>self::MCP_HOOK_NAME]]);
+        while($hook = $r->fetch()){
+            $methods = is_array($hook['METHODS']) ? $hook['METHODS'] : [];
+            if(!in_array($methodId, $methods)) continue;
+            $del = HooksTable::delete($hook['ID']);
+            if(!$del->isSuccess()){
+                $result->addErrors($del->getErrors());
+                return $result;
+            }
+        }
+
+        $del = MethodsTable::delete($methodId);
+        if(!$del->isSuccess()){
+            $result->addErrors($del->getErrors());
+            return $result;
+        }
+
+        return $result;
+    }
+
+    /**
+     * URL для подключения MCP-клиента (ИИ)
+     */
+    public static function getMcpUrl(int $appId, string $token = ''): string
+    {
+        $host = Application::getInstance()->getContext()->getServer()->getHttpHost();
+        $url = 'https://'.$host.'/bitrix/services/main/ajax.php?action=awz:bxorm.api.bxmcp.callrpc&app='.$appId.'&mcprpc=2.0';
+        if($token){
+            $url .= '&key='.$token;
+        }
+        return $url;
+    }
+
     public static function getMethodsList(){
         static $methodsList = [];
         if(empty($methodsList)){

@@ -48,8 +48,70 @@ class Resources extends App
     }
 
     public function listAction(){
+
+        $resources = [];
+
+        //сайт-специфичные ресурсы: обработчики регистрируются через событие, без правки модуля
+        $event = new Event(
+            "awz.bxorm",
+            "onBuildMcpResources",
+            ['app'=>(int)$this->getRequest()->get('app'), 'resources'=>$resources]
+        );
+        $event->send();
+        if($event->getResults()){
+            foreach($event->getResults() as $eventResult){
+                if($eventResult->getType() == EventResult::SUCCESS){
+                    $r = $eventResult->getParameters();
+                    if(isset($r['resources']) && is_array($r['resources'])){
+                        foreach($r['resources'] as $resource){
+                            if(is_array($resource)){
+                                $resources[] = $resource;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         return [
-            "resources"=>[]
+            "resources"=>$resources
         ];
+    }
+
+    /**
+     * Чтение ресурса MCP (resources/read)
+     */
+    public function readAction(int $app, $json = []){
+
+        $params = (is_array($json) && isset($json['params']) && is_array($json['params'])) ? $json['params'] : [];
+        $uri = (string)($params['uri'] ?? '');
+        if(!$uri){
+            $uri = (string)$this->getRequest()->get('uri');
+        }
+        if(!$uri){
+            $this->addError(new Error('uri is required', 'err_uri'));
+            return null;
+        }
+
+        //содержимое ресурса отдает сайт через событие, без правки модуля
+        $event = new Event(
+            "awz.bxorm",
+            "onReadMcpResource",
+            ['app'=>$app, 'uri'=>$uri]
+        );
+        $event->send();
+        if($event->getResults()){
+            foreach($event->getResults() as $eventResult){
+                if($eventResult->getType() == EventResult::SUCCESS){
+                    $r = $eventResult->getParameters();
+                    if(isset($r['resource']) && is_array($r['resource'])){
+                        return ['contents'=>[$r['resource']]];
+                    }
+                }
+            }
+        }
+
+        $this->addError(new Error('resource not found: '.$uri, -32602));
+        return null;
     }
 }

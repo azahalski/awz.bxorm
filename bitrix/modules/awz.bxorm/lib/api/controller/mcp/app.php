@@ -23,13 +23,15 @@ use Bitrix\Main\Result;
 use Bitrix\Main\Web\Json;
 use Awz\BxOrm\Api\Filters\Request\ReplaceFilter;
 use Bitrix\Main\Type\ParameterDictionary;
+use Bitrix\Main\Config\Option;
 
 Loc::loadMessages(__FILE__);
 
 class App extends Controller
 {
-    const MCP_SERVER_VERSION = '1.0.1';
-    const MCP_PROTO_VERSION = '2025-06-18';
+    public static string $MCP_SERVER_VERSION = '1.5.0';
+
+    public static string $MCP_PROTO_VERSION = '2025-06-18';
 
     public function __construct(Request $request = null)
     {
@@ -59,7 +61,27 @@ class App extends Controller
                     )
                 ],
             ],
+            'resources/read' => [
+                'prefilters' => [
+                    new NoCors([],[]),
+                    new AppAuth(
+                        [], [],
+                        Scope::createFromCode('user'),
+                        []
+                    )
+                ],
+            ],
             'prompts/list' => [
+                'prefilters' => [
+                    new NoCors([],[]),
+                    new AppAuth(
+                        [], [],
+                        Scope::createFromCode('user'),
+                        []
+                    )
+                ],
+            ],
+            'prompts/get' => [
                 'prefilters' => [
                     new NoCors([],[]),
                     new AppAuth(
@@ -79,7 +101,47 @@ class App extends Controller
                     )
                 ],
             ],
+            'tools/log_get' => [
+                'prefilters' => [
+                    new NoCors([],[]),
+                    new AppAuth(
+                        [], [],
+                        Scope::createFromCode('user'),
+                        []
+                    )
+                ],
+            ],
+            'tools/log_set' => [
+                'prefilters' => [
+                    new NoCors([],[]),
+                    new AppAuth(
+                        [], [],
+                        Scope::createFromCode('user'),
+                        []
+                    )
+                ],
+            ],
+            'tools/file_get' => [
+                'prefilters' => [
+                    new NoCors([],[]),
+                    new AppAuth(
+                        [], [],
+                        Scope::createFromCode('user'),
+                        []
+                    )
+                ],
+            ],
             'tools/call' => [
+                'prefilters' => [
+                    new NoCors([],[]),
+                    new AppAuth(
+                        [], [],
+                        Scope::createFromCode('user'),
+                        []
+                    )
+                ],
+            ],
+            'ping' => [
                 'prefilters' => [
                     new NoCors([],[]),
                     new AppAuth(
@@ -144,14 +206,31 @@ class App extends Controller
     }
 
     public static function getMcpServerVersion(){
-        return static::MCP_SERVER_VERSION;
+        $version = trim((string)Option::get('awz.bxorm', 'mcp_server_version', static::$MCP_SERVER_VERSION));
+        return $version !== '' ? $version : static::$MCP_SERVER_VERSION;
     }
 
     public static function getProtoVersion(){
-        return static::MCP_PROTO_VERSION;
+        $version = trim((string)Option::get('awz.bxorm', 'mcp_proto_version', static::$MCP_PROTO_VERSION));
+        return $version !== '' ? $version : static::$MCP_PROTO_VERSION;
     }
 
-    public function initializeAction(){
+    public function initializeAction(int $app, $json = []){
+
+        $clientVersion = '';
+        if(is_array($json) && isset($json['params']['protocolVersion'])){
+            $clientVersion = (string)$json['params']['protocolVersion'];
+        }
+
+        //по спеке при несовпадении версий сервер отвечает СВОЕЙ последней версией,
+        //решение о совместимости принимает клиент (а не отказ -32000)
+        if($clientVersion === ''){
+            $this->addError(new Error(
+                'protocolVersion is required (supported: '.static::getProtoVersion().')',
+                -32602
+            ));
+            return null;
+        }
 
         $mcpData = \Awz\BxOrm\HooksTable::getRowById($this->getRequest()->get('app'));
 
@@ -160,14 +239,21 @@ class App extends Controller
             'capabilities' => [
                 'tools' => new \stdClass(),
                 'prompts' => new \stdClass(),
-                'resources' => new \stdClass(),
-                'logging' => new \stdClass()
+                'resources' => new \stdClass()
             ],
             'serverInfo' => [
                 'name' => $mcpData['NAME'],
                 'version' => static::getMcpServerVersion(),
             ]
         ];
+    }
+
+    /**
+     * Проверка живости соединения (MCP ping)
+     */
+    public function pingAction()
+    {
+        return new \stdClass();
     }
 
 }

@@ -31,7 +31,7 @@ class RpcCheck extends BaseFilter {
     public function onBeforeAction(Event $event)
     {
         $httpRequest = $this->getAction()->getController()->getRequest();
-        if($httpRequest->get('mcprpc')){
+        if($httpRequest->get('mcprpc') == \Awz\BxOrm\Helper::MCP_PROTO_VERSION_DEFAULT){
             $httpRequest->addFilter(new Request\Rpc($httpRequest->getInput()));
         }
     }

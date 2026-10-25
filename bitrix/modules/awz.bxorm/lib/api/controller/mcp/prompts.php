@@ -48,8 +48,71 @@ class Prompts extends App
     }
 
     public function listAction(){
+
+        $prompts = [];
+
+        //сайт-специфичные промпты: обработчики регистрируются через событие, без правки модуля
+        $event = new Event(
+            "awz.bxorm",
+            "onBuildMcpPrompts",
+            ['app'=>(int)$this->getRequest()->get('app'), 'prompts'=>$prompts]
+        );
+        $event->send();
+        if($event->getResults()){
+            foreach($event->getResults() as $eventResult){
+                if($eventResult->getType() == EventResult::SUCCESS){
+                    $r = $eventResult->getParameters();
+                    if(isset($r['prompts']) && is_array($r['prompts'])){
+                        foreach($r['prompts'] as $prompt){
+                            if(is_array($prompt)){
+                                $prompts[] = $prompt;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         return [
-            "prompts"=>[]
+            "prompts"=>$prompts
         ];
+    }
+
+    /**
+     * Получение промпта MCP (prompts/get)
+     */
+    public function getAction(int $app, $json = []){
+
+        $params = (is_array($json) && isset($json['params']) && is_array($json['params'])) ? $json['params'] : [];
+        $name = (string)($params['name'] ?? '');
+        $arguments = (isset($params['arguments']) && is_array($params['arguments'])) ? $params['arguments'] : [];
+        if(!$name){
+            $name = (string)$this->getRequest()->get('name');
+        }
+        if(!$name){
+            $this->addError(new Error('name is required', 'err_name'));
+            return null;
+        }
+
+        //содержимое промпта отдает сайт через событие, без правки модуля
+        $event = new Event(
+            "awz.bxorm",
+            "onGetMcpPrompt",
+            ['app'=>$app, 'name'=>$name, 'arguments'=>$arguments]
+        );
+        $event->send();
+        if($event->getResults()){
+            foreach($event->getResults() as $eventResult){
+                if($eventResult->getType() == EventResult::SUCCESS){
+                    $r = $eventResult->getParameters();
+                    if(isset($r['prompt']) && is_array($r['prompt'])){
+                        return $r['prompt'];
+                    }
+                }
+            }
+        }
+
+        $this->addError(new Error('prompt not found: '.$name, -32602));
+        return null;
     }
 }

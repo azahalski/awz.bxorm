@@ -17,6 +17,20 @@ Loc::loadMessages(__FILE__);
 class CheckMethod extends BaseFilter {
 
     /**
+     * Протокольные действия MCP-сущности — всегда доступны, если хук содержит метод
+     */
+    const MCP_PROTO_ACTIONS = [
+        'initialize',
+        'ping',
+        'tools/list',
+        'tools/call',
+        'resources/list',
+        'resources/read',
+        'prompts/list',
+        'prompts/get'
+    ];
+
+    /**
      * CheckMethod constructor.
      * @param array $params
      * @param string[] $scopesBx
@@ -53,13 +67,8 @@ class CheckMethod extends BaseFilter {
         $methodsKeys = [];
         if($method){
 
-            $json = $this->getAction()->getController()->getRequest()->get('json');
-            if(is_array($json) && isset($json['params']['name'])){
-                $methodAr = explode("/", $method);
-                $methodAr[count($methodAr)-1] = $json['params']['name'];
-                $method = implode("/", $methodAr);
-            }
-
+            //подстановки params.name в путь метода нет: gating инструментов tools/call
+            //делается в Mcp\Tools::callAction (события + checkToolEnabled)
             $method = \Awz\BxOrm\Helper::replaceMethod($method, $appId);
             $method = strtolower(str_replace('.json','',$method));
             $methodsKeys = explode(".",preg_replace('/([^0-9a-z.\/])/','', $method));
@@ -105,12 +114,19 @@ class CheckMethod extends BaseFilter {
 
                     if($checkMethod === true) continue;
 
+                    //для MCP-сущности протокольные действия не требуют включения в PARAMS.methods
+                    $isProtoAction = in_array(
+                        mb_strtolower(ltrim((string)$data['ENTITY'], '\\')),
+                        ['awz\bxorm\api\controller\mcp\app', 'mcp\app'],
+                        true
+                    ) && in_array($methodsKeys[1], self::MCP_PROTO_ACTIONS, true);
+
                     $appRight = $methodsAppActive[$data['ID']] ?? [];
                     if(empty($appRight)) continue;
-                    if(empty($data['PARAMS']['methods'])) continue;
+                    if(empty($data['PARAMS']['methods']) && !$isProtoAction) continue;
 
                     foreach($data['PARAMS']['methods'] as $code=>$active){
-                        if($active != 'Y') continue;
+                        if(($active != 'Y') && !($isProtoAction && ($methodsKeys[1] === $code))) continue;
                         if(
                             ($methodsKeys[1] === $code)
                             && (
@@ -131,7 +147,7 @@ class CheckMethod extends BaseFilter {
         if($checkMethod !== true){
             $this->addError(new Error(
                 Loc::getMessage('AWZ_BXORM_API_FILTER_CHECKFILTER_ERR'),
-                'err_method'
+                -32601
             ));
             return new EventResult(EventResult::ERROR, null, 'awz.bxorm', $this);
         }
