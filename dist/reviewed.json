@@ -1,136 +1,46 @@
 {
   "success": true,
+  "requestId": "awz.bxorm-1792914997",
   "data": {
-    "riskLevel": "medium",
-    "summary": {
-      "total": 6,
-      "high": 0,
-      "medium": 3,
-      "low": 3,
-      "info": 0,
-      "scannedFiles": 78,
-      "module": "awz.bxorm"
-    },
     "vulnerabilities": [
       {
         "file": "lib/api/filters/appauth.php",
-        "line": "99",
-        "type": "auth_bypass",
-        "severity": "medium",
-        "description": "Токен вида 'prefix|userId' вызывает $USER->Authorize($userAr[0]) — имперсонализация любого пользователя по ID без пароля. Проверяется только владение токеном хука, привязки userId к подписи/правам нет.",
-        "recommendation": "Убрать имперсонализацию или связать userId с криптографической подписью (Signer) и правами, выдаваемыми администратором.",
-        "fix": "Заменить формат 'key|userId' на подписанный параметр signed (Security\\Sign\\Signer) с проверкой подписи сервера.",
+        "line": "95-101",
+        "type": "Authentication Bypass",
+        "severity": "high",
+        "description": "Подтверждена механика эскалации: после успешной проверки ключа хука AppAuth разбирает формат 'userId|TOKEN' и вызывает $USER->Authorize($userAr[0]) — авторизует PHP-сессию под любым указанным ID пользователя БЕЗ пароля. Ключ хука (TOKEN) — долгоживущий статический API-credential (генерируется Helper::generateToken, хранится открыто в b_awz_bxorm_hooks.TOKEN, выводится в админке и подставляется в GET-URL в lib/adminpages/hookslist.php:27-30). Любой обладатель TOKEN (утечка через access-логи сервера, referer, логи прокси, компрометация интегратора) может передать key='1|<TOKEN>' и получить полноценную авторизованную сессию пользователя с ID=1 (администратор) — далее все действия сайта, защищенные только Authentication-фильтром, выполняются от имени админа. Дизайн задокументирован в AGENTS.md как фича, но превращает утечку API-ключа в полный account takeover; требует знания токена, поэтому severity medium (аутентифицированная эскалация по рубрике).",
+        "recommendation": "Разделить аутентификацию приложения (по TOKEN) и авторизацию пользователя: не вызывать $USER->Authorize по статическому API-ключу. Если impersonation необходим — требовать отдельный short-lived подписанный ticket (Signer), вести allowlist пользователей, разрешенных для impersonation (опция модуля, по умолчанию пустой), запрещать impersonation администраторов без явного разрешения и логировать каждый факт авторизации.",
+        "fix": "Before:\nif(strpos($key, '|')!==false){\n    $userAr = explode('|',$key);\n    if(count($userAr)==2){\n        global $USER;\n        $USER->Authorize($userAr[0]);\n    }\n}\n\nAfter:\nif(strpos($key, '|')!==false){\n    $userAr = explode('|',$key);\n    if(count($userAr)==2){\n        $userId = (int)$userAr[0];\n        $allowed = array_filter(array_map('intval', explode(',',\n            (string)\\Bitrix\\Main\\Config\\Option::get('awz.bxorm', 'impersonate_users', '')\n        )));\n        if($userId > 0 && in_array($userId, $allowed, true)){\n            global $USER;\n            $USER->Authorize($userId);\n        }\n        // при отсутствии userId в allowlist — НЕ авторизуем,\n        // вызов продолжает работать в app-контексте без PHP-сессии\n    }\n}",
         "reviewed": {
           "oldSeverity": "medium",
-          "newSeverity": "medium",
-          "changed": false,
-          "category": "kept-as-reported",
+          "newSeverity": "high",
+          "changed": true,
+          "category": "account-takeover",
           "versionScope": "current",
           "version": "current",
           "currentVersionRelevance": "present-in-current-scan",
-          "action": "fix",
+          "action": "verify-on-latest-version",
           "confidence": "medium",
-          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+          "rationale": "Kept as high because the finding describes possible account takeover or login into another user's account."
         },
         "partner_disposition": {
           "status": "accepted_risk",
-          "note": "",
+          "note": "По умолчанию токен генерится без пользователя. Авторизация хука - это доп опция администратора.",
           "author": "Andrew Zahalski",
-          "updated_at": "2026-10-25T00:59:28+00:00"
-        }
-      },
-      {
-        "file": "lib/api/controller/app.php",
-        "line": "534",
-        "type": "information_disclosure",
-        "severity": "medium",
-        "description": "В getList() ORM-запроса параметр filter передается в entity::getList() без whitelist (в отличие от select/order). Клиент может фильтровать по неактивным (скрытым) полям и делать blind-извлечение данных, не доступных через select.",
-        "recommendation": "Валидировать ключи filter по списку активных полей PARAMS.fields.",
-        "fix": "Проверять все ключи filter (без операторов) на in_array($fieldKey, $activeFields), rejecting неизвестные.",
-        "reviewed": {
-          "oldSeverity": "medium",
-          "newSeverity": "medium",
-          "changed": false,
-          "category": "kept-as-reported",
-          "versionScope": "current",
-          "version": "current",
-          "currentVersionRelevance": "present-in-current-scan",
-          "action": "fix",
-          "confidence": "medium",
-          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
-        },
-        "partner_disposition": {
-          "status": "accepted_risk",
-          "note": "",
-          "author": "Andrew Zahalski",
-          "updated_at": "2026-10-25T00:59:28+00:00"
-        }
-      },
-      {
-        "file": "lib/api/filters/nocors.php",
-        "line": "37",
-        "type": "cors_misconfiguration",
-        "severity": "low",
-        "description": "Заголовок Access-Control-Allow-Origin эхом повторяет любой Origin запроса либо выставляется '*' — фактически CORS разрешен всем, при этом фильтр называется NoCors (вводит в заблуждение).",
-        "recommendation": "Отдавать CORS-заголовок только для сконфигурированных Origin (список в настройках модуля).",
-        "fix": "Хранить список разрешенных Origin в Option и сравнивать перед установкой заголовка.",
-        "reviewed": {
-          "oldSeverity": "low",
-          "newSeverity": "low",
-          "changed": false,
-          "category": "kept-as-reported",
-          "versionScope": "current",
-          "version": "current",
-          "currentVersionRelevance": "present-in-current-scan",
-          "action": "fix",
-          "confidence": "medium",
-          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
-        },
-        "partner_disposition": {
-          "status": "accepted_risk",
-          "note": "",
-          "author": "Andrew Zahalski",
-          "updated_at": "2026-10-25T00:59:28+00:00"
-        }
-      },
-      {
-        "file": "lib/helper.php",
-        "line": "179",
-        "type": "token_in_url",
-        "severity": "low",
-        "description": "Токен хука передается в query-параметре URL (&key=...) и дублируется в админ-страницах и ссылках для клиентов — утечка через referer, access-логи, историю браузера.",
-        "recommendation": "Продвигать авторизацию через заголовок Authorization: Token и скрывать token из URL по умолчанию.",
-        "fix": "Генерировать ссылки без key, показывать токен только один раз при создании.",
-        "reviewed": {
-          "oldSeverity": "low",
-          "newSeverity": "low",
-          "changed": false,
-          "category": "kept-as-reported",
-          "versionScope": "current",
-          "version": "current",
-          "currentVersionRelevance": "present-in-current-scan",
-          "action": "fix",
-          "confidence": "medium",
-          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
-        },
-        "partner_disposition": {
-          "status": "accepted_risk",
-          "note": "",
-          "author": "Andrew Zahalski",
-          "updated_at": "2026-10-25T00:59:28+00:00"
+          "updated_at": "2026-10-25T08:03:13+00:00"
         }
       },
       {
         "file": "lib/api/controller/mcp/tools.php",
-        "line": "451",
-        "type": "info_exposure",
-        "severity": "low",
-        "description": "shell_exec('top -b -n 1'), 'free -m', 'nproc' — команды константные, без пользовательского ввода; выдают сведения о нагрузке сервера держателю токена.",
-        "recommendation": "Приемлемо при условии включения инструмента только для доверенных хуков; документировать риск.",
-        "fix": "Убедиться, что tool processinfo выключен по умолчанию в предустановке MCP-метода.",
+        "line": "241-325",
+        "type": "Information Disclosure",
+        "severity": "medium",
+        "description": "Подтверждена: инструмент log_set (tools/log_set, вызывается по токену MCP-хука через bxmcp.callrpc) записывает лог-файл ВНУТРЬ DOCUMENT_ROOT по предсказуемому пути: fallback-каталоги /local/logs/ → /local/php_interface/ → /bitrix/php_interface/ (строки 273-286), имя файла задается параметром вызова (санитизируется только basename, строка 244). Далее log_get читает содержимое и возвращает его в ответе MCP-клиенту. Лог может содержать чувствительные данные: трассировки исключений ядра с путями и значениями переменных (log_error=true, строка 295), записи всех PSR-логгеров сайта, потенциально токены/персональные данные. По рубрике «логирование чувствительных данных в document_root по предсказуемому пути» — это high, но эксплуатация требует валидного MCP-токена (аутентифицированный сценарий), поэтому medium.",
+        "recommendation": "Писать логи вне DOCUMENT_ROOT (абсолютный путь за пределами docroot); при невозможности — принудительно создавать .htaccess (Deny from all) в целевом каталоге и предупреждать, что /bitrix/php_interface/ должен быть закрыт веб-сервером; выдавать в log_get только basename файла; ограничить tools/log_set отдельным scope/разрешением.",
+        "fix": "Before:\n}elseif(is_dir($docRoot.'/local/logs')){\n    $relative = 'local/logs';\n}elseif(is_dir($docRoot.'/local/php_interface')){\n    $relative = 'local/php_interface';\n}else{\n    $relative = 'bitrix/php_interface';\n}\n\nAfter:\n// логи — вне DOCUMENT_ROOT\n$outside = dirname($docRoot).'/logs/awz.bxorm';\nif(!is_dir($outside)){ @mkdir($outside, 0750, true); }\nif(is_dir($outside)){\n    $relative = $outside; // абсолютный путь вне web-доступа\n}else{\n    // fallback: только закрытые каталоги + защита от прямого доступа\n    $relative = is_dir($docRoot.'/local/logs') ? 'local/logs' : 'bitrix/php_interface';\n    $ht = $docRoot.'/'.$relative.'/.htaccess';\n    if(!file_exists($ht)){ @file_put_contents($ht, \"Require all denied\\n\"); }\n}",
         "reviewed": {
-          "oldSeverity": "low",
-          "newSeverity": "low",
+          "oldSeverity": "medium",
+          "newSeverity": "medium",
           "changed": false,
           "category": "kept-as-reported",
           "versionScope": "current",
@@ -144,17 +54,44 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski",
-          "updated_at": "2026-10-25T00:59:28+00:00"
+          "updated_at": "2026-10-25T08:03:13+00:00"
         }
       },
       {
-        "file": "install/db/mysql/install.sql",
-        "line": "4",
-        "type": "storage_of_secrets",
+        "file": "lib/adminpages/hooksedit.php",
+        "line": "37-47",
+        "type": "Cross-Site Scripting",
+        "severity": "medium",
+        "description": "Подозрение: reflected XSS на админ-странице редактирования хука. HooksEdit::getFieldValue() при несохраненной форме возвращает сырое значение $_REQUEST[$name] (строка 38) БЕЗ какого-либо экранирования — в отличие от аналогичного MethodsEdit::getFieldValue (lib/adminpages/methodsedit.php:48), где применяется htmlspecialcharsEx. Значение попадает в fieldsValues и рендерится awz\\Admin\\IForm::defaultInterface() в HTML-полях формы (input value / textarea). Атакующий формирует ссылку вида /bitrix/admin/awz_bxorm_hooks_edit.php?NAME=<script>...&lang=ru — при открытии залогиненным оператором (фишинговая ссылка, элемент админ-меню) скрипт исполняется в контексте админ-сессии. Эксплуатация зависит от того, экранирует ли внешняя библиотека awz.admin значения при выводе (её код вне проверяемого модуля) — поэтому помечено как подозрение, severity по рубрике для reflected XSS — medium.",
+        "recommendation": "Экранировать значения из запроса так же, как в MethodsEdit: htmlspecialcharsEx для скаляров и рекурсивное экранирование для массивов при возврате из getFieldValue; не полагаться на экранирование в стороннем рендерере awz.admin.",
+        "fix": "Before:\nif(!$this->saved) {\n    $value = (isset($_REQUEST[$name]) && array_key_exists($name, $_REQUEST)) ? $_REQUEST[$name] : $defValue;\n}\n\nAfter:\nif(!$this->saved) {\n    $value = (isset($_REQUEST[$name]) && array_key_exists($name, $_REQUEST))\n        ? (is_array($_REQUEST[$name])\n            ? array_map(fn($v) => \\htmlspecialcharsEx((string)$v), $_REQUEST[$name])\n            : \\htmlspecialcharsEx((string)$_REQUEST[$name]))\n        : $defValue;\n}",
+        "reviewed": {
+          "oldSeverity": "medium",
+          "newSeverity": "medium",
+          "changed": false,
+          "category": "cross-privilege-stored-xss",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Set to medium because data controlled by a lower-privileged actor appears to execute in an administrator/moderation/order interface."
+        },
+        "partner_disposition": {
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski",
+          "updated_at": "2026-10-25T08:03:13+00:00"
+        }
+      },
+      {
+        "file": "lib/adminpages/hookslist.php",
+        "line": "27-31",
+        "type": "Information Disclosure",
         "severity": "low",
-        "description": "Токены хуков хранятся в БД в открытом виде (TOKEN varchar(32)).",
-        "recommendation": "Хранить хэш токена, проверять по хэшу; для совместимости с существующими клиентами — постепенный переход.",
-        "fix": "Добавить поле TOKEN_HASH, миграция при обновлении.",
+        "description": "Подтверждена: на странице списка хуков (а также в Helper::getMcpUrl, lib/helper.php:174-182) секретный TOKEN хука подставляется прямо в GET-параметр URL ('...&key='.$row->arRes['TOKEN']). Такие URL попадают в access-логи веб-сервера, прокси, историю браузера и referer-заголовки при переходе по ссылке (target=\"_blank\"), делая долгоживущий API-ключ доступным по побочным каналам. В сочетании с impersonation-механизмом AppAuth (userId|TOKEN) утечка ключа из лога означает захват сессии администратора. Усугубляющий фактор: NoCors-фильтр отражает любой Origin (lib/api/filters/nocors.php:33-40), позволяя сторонним сайтам читать ответы API при наличии ключа в URL жертвы.",
+        "recommendation": "Передавать ключ только в заголовке Authorization (поддержка уже есть в AppAuth) или в POST; в админке показывать ключ отдельной кнопкой «показать/скопировать», а не вшивать в href; не логировать query-строку с key (фильтрация в access-логах); в NoCors не отражать произвольный Origin — выдавать Access-Control-Allow-Origin только для явно разрешенных источников.",
+        "fix": "Before:\n$baseApiUrl = 'https://'.$domain.'/bitrix/services/main/ajax.php?action=awz:bxorm.api.app.call&app='.$row->arRes['ID'].'&key='.$row->arRes['TOKEN'].'&method=';\n\nAfter:\n// ключ не вшиваем в URL — копирование по кнопке, использование через заголовок\n$baseApiUrl = 'https://'.$domain.'/bitrix/services/main/ajax.php?action=awz:bxorm.api.app.call&app='.$row->arRes['ID'].'&method=';\n// рядом выводим кнопку \"Копировать Authorization: Token <TOKEN>\" через JS в буфер обмена,\n// а не как часть href",
         "reviewed": {
           "oldSeverity": "low",
           "newSeverity": "low",
@@ -171,38 +108,132 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski",
-          "updated_at": "2026-10-25T00:59:28+00:00"
+          "updated_at": "2026-10-25T08:03:13+00:00"
+        }
+      },
+      {
+        "file": "lib/api/filters/nocors.php",
+        "line": "31-41",
+        "type": "Information Disclosure",
+        "severity": "low",
+        "description": "Подтверждена: NoCors-фильтр отражает в Access-Control-Allow-Origin любой присланный Origin из запроса (или '*'), без проверки на allowlist доменов. API-эндпоинты awz:bxorm.api.* авторизуются по ключу в GET/POST, который браузер жертвы подставит автоматически, если ключ когда-либо попал в сохраненную ссылку; отраженный Origin делает ответ полностью читаемым для стороннего сайта (CORS misconfiguration). Прямой эксплуатации без обладания ключом нет (без cookie-credentialed режима), поэтому low, но это усиливающий фактор для находки о key-in-GET (lib/adminpages/hookslist.php).",
+        "recommendation": "Не отражать произвольный Origin: вести конфигурируемый allowlist доверенных источников (опция модуля); для неизвестных Origin не выдавать заголовок Access-Control-Allow-Origin вовсе; при отражении Origin ограничивать Access-Control-Allow-Methods и Vary: Origin.",
+        "fix": "Before:\n$origin = $this->origin ?: \\Bitrix\\Main\\Context::getCurrent()->getRequest()->getHeader('Origin');\nif ($origin)\n{\n    $response->addHeader('Access-Control-Allow-Origin', $origin);\n}else{\n    $response->addHeader('Access-Control-Allow-Origin', \"*\");\n}\n\nAfter:\n$origin = $this->origin ?: \\Bitrix\\Main\\Context::getCurrent()->getRequest()->getHeader('Origin');\n$allowed = array_filter(array_map('trim', explode(',',\n    (string)\\Bitrix\\Main\\Config\\Option::get('awz.bxorm', 'cors_allow_origins', '')\n)));\nif($origin && in_array($origin, $allowed, true)){\n    $response->addHeader('Access-Control-Allow-Origin', $origin);\n    $response->addHeader('Vary', 'Origin');\n}\n// для неизвестных Origin — заголовок CORS не выдается",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "low",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        },
+        "partner_disposition": {
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski",
+          "updated_at": "2026-10-25T08:03:13+00:00"
         }
       }
+    ],
+    "summary": "Обнаружено 5 уязвимостей в 4 файлах при анализе 78 целевых файлов модуля (прочитано целиком ~40 файлов, включая все API-контроллеры, фильтры, админ-страницы и ORM-таблицы). Максимальная severity: medium. Сигналы recon по OS-командам (shell_exec с фиксированными строками 'top/free/nproc', без пользовательского ввода — отклонены), unserialize (все 4 места с allowed_classes=false — безопасны), regex injection (константные паттерны — отклонены), SQL (getConnection только для чтения метаданных БД — отклонен) и include/require (все пути статические DOCUMENT_ROOT — отклонены) проверены и осознанно отклонены. Ключевые находки: impersonation-механизм userId|TOKEN в AppAuth (medium), запись логов внутрь DOCUMENT_ROOT инструментом log_set (medium), reflected XSS-подозрение в HooksEdit::getFieldValue (medium), токен в GET-URL админки (low) и отражающий произвольный Origin CORS-фильтр (low).",
+    "scannedFiles": 78,
+    "riskLevel": "high",
+    "auditedFiles": [
+      ".settings.php",
+      "include.php",
+      "options.php",
+      "admin/check_awz_admin.php",
+      "admin/hooks_edit.php",
+      "admin/hooks_list.php",
+      "admin/menu.php",
+      "admin/methods_edit.php",
+      "admin/methods_list.php",
+      "install/index.php",
+      "install/solution.php",
+      "install/unstep.php",
+      "install/version.php",
+      "install/admin/awz_bxorm_hooks_edit.php",
+      "lib/helper.php",
+      "lib/hooks.php",
+      "lib/methods.php",
+      "lib/adminpages/hooksedit.php",
+      "lib/adminpages/hookslist.php",
+      "lib/adminpages/methodsedit.php",
+      "lib/adminpages/methodslist.php",
+      "lib/api/binderresult.php",
+      "lib/api/controller/app.php",
+      "lib/api/controller/bxmcp.php",
+      "lib/api/controller/hook.php",
+      "lib/api/controller/mcp/app.php",
+      "lib/api/controller/mcp/prompts.php",
+      "lib/api/controller/mcp/resources.php",
+      "lib/api/controller/mcp/tools.php",
+      "lib/api/controller/mcp/DTO/Info/BitrixInfo.php",
+      "lib/api/controller/mcp/DTO/Info/BitrixModuleItemInfo.php",
+      "lib/api/controller/mcp/DTO/Info/DatabaseInfo.php",
+      "lib/api/controller/mcp/DTO/Info/EnvInfo.php",
+      "lib/api/controller/mcp/DTO/Info/PhpInfo.php",
+      "lib/api/controller/mcp/DTO/Info/SystemInfo.php",
+      "lib/api/controller/mcp/DTO/Tool/InputSchema.php",
+      "lib/api/controller/mcp/DTO/Tool/OutputSchema.php",
+      "lib/api/controller/mcp/DTO/Tool/PropertyItemsSchema.php",
+      "lib/api/controller/mcp/DTO/Tool/PropertySchema.php",
+      "lib/api/controller/mcp/DTO/Tool/ToolListItem.php",
+      "lib/api/controller/mcp/Traits/JsonSerializable.php",
+      "lib/api/filters/appauth.php",
+      "lib/api/filters/checkmethod.php",
+      "lib/api/filters/nocors.php",
+      "lib/api/filters/rpccheck.php",
+      "lib/api/filters/sign.php",
+      "lib/api/filters/request/replacefilter.php",
+      "lib/api/filters/request/rpc.php",
+      "lib/api/filters/request/setfilter.php",
+      "lib/api/filters/request/sign.php",
+      "lib/api/scopes/basefilter.php",
+      "lib/api/scopes/controller.php",
+      "lib/api/scopes/iscope.php",
+      "lib/api/scopes/parameters.php",
+      "lib/api/scopes/scope.php",
+      "lib/api/scopes/scopecollection.php",
+      "lib/api/type/parameters.php",
+      "lib/dict/parameters.php"
     ],
     "reviewSummary": {
       "reviewedAt": "2026-10-25",
       "method": "BUS-aware triage: preserve original finding fields except severity, add reviewed node with old severity and rationale.",
       "totals": {
-        "vulnerabilities": 6,
-        "changedSeverity": 0,
-        "unchangedSeverity": 6
+        "vulnerabilities": 5,
+        "changedSeverity": 1,
+        "unchangedSeverity": 4
       },
       "rawSeverityCounts": {
-        "medium": 2,
-        "low": 4
+        "medium": 3,
+        "low": 2
       },
       "reviewedSeverityCounts": {
+        "high": 1,
         "medium": 2,
-        "low": 4
+        "low": 2
       },
       "currentScope": {
-        "total": 6,
+        "total": 5,
         "rawSeverityCounts": {
-          "medium": 2,
-          "low": 4
+          "medium": 3,
+          "low": 2
         },
         "reviewedSeverityCounts": {
+          "high": 1,
           "medium": 2,
-          "low": 4
+          "low": 2
         },
         "reviewedCategories": {
-          "kept-as-reported": 6
+          "account-takeover": 1,
+          "kept-as-reported": 3,
+          "cross-privilege-stored-xss": 1
         }
       },
       "historicalUpdatePackages": {
@@ -217,8 +248,8 @@
       ]
     },
     "feedbackSummary": {
-      "updatedAt": "2026-10-25T00:59:28+00:00",
-      "applied": 6
+      "updatedAt": "2026-10-25T08:03:13+00:00",
+      "applied": 5
     }
   }
 }
