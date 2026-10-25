@@ -1,5 +1,5 @@
 <?
-$MESS["AWZ_BXORM_OPT_TITLE"] = "Настройки модуля AWZ: Api на вебхуках";
+$MESS["AWZ_BXORM_OPT_TITLE"] = "Настройки модуля AWZ: MCP, ORM Api, Вебхуки";
 $MESS["AWZ_BXORM_OPT_SECT1"] = "MCP для ИИ";
 $MESS["AWZ_BXORM_OPT_SECT3"] = "Права доступа";
 $MESS["AWZ_BXORM_OPT_L_BTN_SAVE"] = "Сохранить";

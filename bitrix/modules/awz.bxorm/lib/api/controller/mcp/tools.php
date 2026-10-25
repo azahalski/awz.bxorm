@@ -137,7 +137,7 @@ class Tools extends App
     /**
      * Возвращает содержимое лог-файла Битрикса (по умолчанию файл из .settings.php секции log)
      */
-    public function logGetAction(string $file = '', int $lines = 100)
+    public function log_getAction(string $file = '', int $lines = 100)
     {
         try{
             $lines = min(1000, max(1, $lines));
@@ -196,7 +196,7 @@ class Tools extends App
     /**
      * Настраивает лог-файл Битрикса в .settings.php (секция log) — файл Bitrix создаст сам при первой записи
      */
-    public function logSetAction(string $file = '', int $sizeMb = 20)
+    public function log_setAction(string $file = '', int $sizeMb = 20)
     {
         try{
             $file = preg_replace('/[^a-zA-Z0-9._-]/', '', basename($file));
@@ -292,7 +292,7 @@ class Tools extends App
      * целиком или выбранные строки (номер "10", диапазон "10-25", список "1,5,9-12").
      * Для одиночной строки добавляет контекст ±3 строки.
      */
-    public function fileGetAction(string $file = '', string $lines = '')
+    public function file_getAction(string $file = '', string $lines = '')
     {
         try{
             if(trim($file) === ''){
