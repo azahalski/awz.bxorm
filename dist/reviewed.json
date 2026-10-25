@@ -1,0 +1,224 @@
+{
+  "success": true,
+  "data": {
+    "riskLevel": "medium",
+    "summary": {
+      "total": 6,
+      "high": 0,
+      "medium": 3,
+      "low": 3,
+      "info": 0,
+      "scannedFiles": 78,
+      "module": "awz.bxorm"
+    },
+    "vulnerabilities": [
+      {
+        "file": "lib/api/filters/appauth.php",
+        "line": "99",
+        "type": "auth_bypass",
+        "severity": "medium",
+        "description": "Токен вида 'prefix|userId' вызывает $USER->Authorize($userAr[0]) — имперсонализация любого пользователя по ID без пароля. Проверяется только владение токеном хука, привязки userId к подписи/правам нет.",
+        "recommendation": "Убрать имперсонализацию или связать userId с криптографической подписью (Signer) и правами, выдаваемыми администратором.",
+        "fix": "Заменить формат 'key|userId' на подписанный параметр signed (Security\\Sign\\Signer) с проверкой подписи сервера.",
+        "reviewed": {
+          "oldSeverity": "medium",
+          "newSeverity": "medium",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        },
+        "partner_disposition": {
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski",
+          "updated_at": "2026-10-25T00:59:28+00:00"
+        }
+      },
+      {
+        "file": "lib/api/controller/app.php",
+        "line": "534",
+        "type": "information_disclosure",
+        "severity": "medium",
+        "description": "В getList() ORM-запроса параметр filter передается в entity::getList() без whitelist (в отличие от select/order). Клиент может фильтровать по неактивным (скрытым) полям и делать blind-извлечение данных, не доступных через select.",
+        "recommendation": "Валидировать ключи filter по списку активных полей PARAMS.fields.",
+        "fix": "Проверять все ключи filter (без операторов) на in_array($fieldKey, $activeFields), rejecting неизвестные.",
+        "reviewed": {
+          "oldSeverity": "medium",
+          "newSeverity": "medium",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        },
+        "partner_disposition": {
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski",
+          "updated_at": "2026-10-25T00:59:28+00:00"
+        }
+      },
+      {
+        "file": "lib/api/filters/nocors.php",
+        "line": "37",
+        "type": "cors_misconfiguration",
+        "severity": "low",
+        "description": "Заголовок Access-Control-Allow-Origin эхом повторяет любой Origin запроса либо выставляется '*' — фактически CORS разрешен всем, при этом фильтр называется NoCors (вводит в заблуждение).",
+        "recommendation": "Отдавать CORS-заголовок только для сконфигурированных Origin (список в настройках модуля).",
+        "fix": "Хранить список разрешенных Origin в Option и сравнивать перед установкой заголовка.",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "low",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        },
+        "partner_disposition": {
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski",
+          "updated_at": "2026-10-25T00:59:28+00:00"
+        }
+      },
+      {
+        "file": "lib/helper.php",
+        "line": "179",
+        "type": "token_in_url",
+        "severity": "low",
+        "description": "Токен хука передается в query-параметре URL (&key=...) и дублируется в админ-страницах и ссылках для клиентов — утечка через referer, access-логи, историю браузера.",
+        "recommendation": "Продвигать авторизацию через заголовок Authorization: Token и скрывать token из URL по умолчанию.",
+        "fix": "Генерировать ссылки без key, показывать токен только один раз при создании.",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "low",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        },
+        "partner_disposition": {
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski",
+          "updated_at": "2026-10-25T00:59:28+00:00"
+        }
+      },
+      {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "451",
+        "type": "info_exposure",
+        "severity": "low",
+        "description": "shell_exec('top -b -n 1'), 'free -m', 'nproc' — команды константные, без пользовательского ввода; выдают сведения о нагрузке сервера держателю токена.",
+        "recommendation": "Приемлемо при условии включения инструмента только для доверенных хуков; документировать риск.",
+        "fix": "Убедиться, что tool processinfo выключен по умолчанию в предустановке MCP-метода.",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "low",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        },
+        "partner_disposition": {
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski",
+          "updated_at": "2026-10-25T00:59:28+00:00"
+        }
+      },
+      {
+        "file": "install/db/mysql/install.sql",
+        "line": "4",
+        "type": "storage_of_secrets",
+        "severity": "low",
+        "description": "Токены хуков хранятся в БД в открытом виде (TOKEN varchar(32)).",
+        "recommendation": "Хранить хэш токена, проверять по хэшу; для совместимости с существующими клиентами — постепенный переход.",
+        "fix": "Добавить поле TOKEN_HASH, миграция при обновлении.",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "low",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        },
+        "partner_disposition": {
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski",
+          "updated_at": "2026-10-25T00:59:28+00:00"
+        }
+      }
+    ],
+    "reviewSummary": {
+      "reviewedAt": "2026-10-25",
+      "method": "BUS-aware triage: preserve original finding fields except severity, add reviewed node with old severity and rationale.",
+      "totals": {
+        "vulnerabilities": 6,
+        "changedSeverity": 0,
+        "unchangedSeverity": 6
+      },
+      "rawSeverityCounts": {
+        "medium": 2,
+        "low": 4
+      },
+      "reviewedSeverityCounts": {
+        "medium": 2,
+        "low": 4
+      },
+      "currentScope": {
+        "total": 6,
+        "rawSeverityCounts": {
+          "medium": 2,
+          "low": 4
+        },
+        "reviewedSeverityCounts": {
+          "medium": 2,
+          "low": 4
+        },
+        "reviewedCategories": {
+          "kept-as-reported": 6
+        }
+      },
+      "historicalUpdatePackages": {
+        "total": 0,
+        "rawSeverityCounts": {},
+        "reviewedSeverityCounts": {},
+        "reviewedCategories": {}
+      },
+      "caveats": [
+        "Type, file, line, description, recommendation and fix are preserved from the source journal.",
+        "Severity is replaced with reviewed triage severity."
+      ]
+    },
+    "feedbackSummary": {
+      "updatedAt": "2026-10-25T00:59:28+00:00",
+      "applied": 6
+    }
+  }
+}
