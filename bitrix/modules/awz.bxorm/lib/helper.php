@@ -290,7 +290,7 @@ class Helper {
         $r = HooksTable::getRowById($appId);
         if(!$r) return false;
         if($r['ACTIVE'] && $r['ACTIVE']!='Y') return false;
-        if($r['TOKEN'] && ($r['TOKEN']===$key)) {
+        if($r['TOKEN'] && hash_equals((string)$r['TOKEN'], $key)) {
             return true;
         }
         return false;

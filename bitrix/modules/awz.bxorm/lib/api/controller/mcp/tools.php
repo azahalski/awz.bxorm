@@ -194,7 +194,7 @@ class Tools extends App
     }
 
     /**
-     * Настраивает лог-файл Битрикса в .settings.php (секция log)
+     * Настраивает лог-файл Битрикса в .settings.php (секция log) — файл Bitrix создаст сам при первой записи
      */
     public function logSetAction(string $file = '', int $sizeMb = 20)
     {
@@ -205,14 +205,6 @@ class Tools extends App
             }
             $sizeMb = min(512, max(1, $sizeMb));
             $sizeBytes = $sizeMb * 1024 * 1024;
-
-            $path = \Bitrix\Main\Application::getDocumentRoot().'/bitrix/php_interface/'.$file;
-            if(!is_file($path)){
-                @file_put_contents($path, '');
-            }
-            if(!is_file($path)){
-                throw new \Exception('не удалось создать файл '.$path);
-            }
 
             $configuration = \Bitrix\Main\Config\Configuration::getInstance();
             $logConfig = (array)($configuration->get('log') ?? []);
@@ -226,12 +218,73 @@ class Tools extends App
             return [
                 'content' => [[
                     'type' => 'text',
-                    'text' => 'Лог настроен: /bitrix/php_interface/'.$file.', максимальный размер до ротации: '.$sizeMb.' МБ ('.$sizeBytes.' байт), log_error: on. Файл готов к записи.'
+                    'text' => 'Лог настроен: /bitrix/php_interface/'.$file.' (создастся при первой записи), максимальный размер до ротации: '.$sizeMb.' МБ ('.$sizeBytes.' байт), log_error: on.'
                 ]]
             ];
         }catch(\Throwable $e){
             return ['content'=>[['type'=>'text','text'=>'tool log_set error: '.$e->getMessage()]], 'isError'=>true];
         }
+    }
+
+    /**
+     * Служебные файлы, чтение которых запрещено (секреты: пароли БД, ключи, настройки)
+     */
+    const FILE_READ_BLACKLIST = [
+        'dbconn.php',
+        '.settings.php',
+        '.settings_extra.php',
+        '.access.php',
+        '.config.php',
+        '.primary.cfg.php',
+        'after_connect.php',
+        'after_connect_d7.php'
+    ];
+
+    /**
+     * Каталоги-запреты внутри корня сайта (бэкапы, дампы)
+     */
+    const FILE_READ_BLACKLIST_DIRS = [
+        '/bitrix/backup/',
+        '/bitrix/php_interface/backup/',
+        '/upload/backup/',
+        '/upload/bak/'
+    ];
+
+    /**
+     * Белые списки каталогов для file_get: проверка черных списков и каталогов из опции mcp_file_whitelist
+     */
+    private function checkFileReadAllowed(string $real): string
+    {
+        $base = strtolower(basename($real));
+
+        if(in_array($base, self::FILE_READ_BLACKLIST, true)){
+            return 'чтение служебного файла запрещено: '.basename($real);
+        }
+        if(strpos($base, '.env') !== false || preg_match('/\.env[.\-_]/i', $base)){
+            return 'чтение служебного файла запрещено: '.basename($real);
+        }
+
+        $docRoot = \Bitrix\Main\Application::getDocumentRoot();
+        $rootReal = realpath($docRoot);
+        $rel = str_replace('\\','/', strtolower(substr($real, (int)strlen($rootReal))));
+        foreach(self::FILE_READ_BLACKLIST_DIRS as $dir){
+            if(strpos($rel, $dir) === 0){
+                return 'чтение служебного каталога запрещено: '.$dir;
+            }
+        }
+
+        $whitelist = array_filter(array_map('trim', explode(',',
+            (string)\Bitrix\Main\Config\Option::get('awz.bxorm', 'mcp_file_whitelist',
+                '/bitrix/php_interface/,/bitrix/modules/,/local/,/upload/')
+        )));
+        foreach($whitelist as $dir){
+            $dirReal = realpath($docRoot.'/'.ltrim($dir, '/'));
+            if($dirReal && str_starts_with($real, $dirReal)){
+                return '';
+            }
+        }
+
+        return 'путь вне разрешенных каталогов (настройка mcp_file_whitelist)';
     }
 
     /**
@@ -252,6 +305,11 @@ class Tools extends App
             $rootReal = realpath($docRoot);
             if(!$real || $rootReal === false || !str_starts_with($real, $rootReal)){
                 return ['content'=>[['type'=>'text','text'=>'путь вне корня сайта или не существует: '.$file]], 'isError'=>true];
+            }
+
+            $denyReason = $this->checkFileReadAllowed($real);
+            if($denyReason !== ''){
+                return ['content'=>[['type'=>'text','text'=>$denyReason]], 'isError'=>true];
             }
 
             if(!is_file($real)){
