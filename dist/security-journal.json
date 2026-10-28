@@ -5,15 +5,15 @@
   },
   "current_state": {
     "status": "needs_review",
-    "last_run_id": "awz.bxorm-1792914997",
+    "last_run_id": "awz.bxorm-1793180950",
     "archive_sha256": null,
     "open_findings": 0,
     "blocking_findings_open": 0,
     "false_positive_findings": 0,
-    "accepted_risk_findings": 5,
-    "fixed_findings": 20,
+    "accepted_risk_findings": 8,
+    "fixed_findings": 25,
     "removed_findings": 0,
-    "total_findings": 25
+    "total_findings": 33
   },
   "runs": [
     {
@@ -105,6 +105,25 @@
         "still_open_findings": 0,
         "reopened_findings": 0,
         "resolved_since_previous_run": 7
+      }
+    },
+    {
+      "run_id": "awz.bxorm-1793180950",
+      "created_at": "2026-10-28T06:51:48+00:00",
+      "archive_sha256": null,
+      "scanner_request_id": "awz.bxorm-1793180950",
+      "input_summary": "Итоговое количество находок: 8. Распределение по severity: high — 1 (имперсонализация в AppAuth), medium — 3 (IDOR filter без whitelist в app.php getList; Path Traversal/конфиг-манипуляция tools/log_set; reflected XSS в hooksedit.php), low — 4 (add() игнорирует isReadOnly; токен в URL helper.php; CORS reflection nocors.php; file_get широкий дефолтный whitelist). riskLevel = high. Сверка с журналом security-journal.json (25 находок: 20 fixed, 5 accepted_risk): все 5 accepted_risk воспроизводятся в текущем коде и включены в отчет (JF-21 -> high AppAuth; JF-22 -> medium log_set + low file_get; JF-23 -> medium hooksedit XSS; JF-24 -> low token_in_url; JF-25 -> low nocors). Все 20 findings со статусом fixed подтверждены как исправленные: blacklist file_get (b4353b2) присутствует (константы FILE_READ_BLACKLIST/FILE_READ_BLACKLIST_DIRS, checkFileReadAllowed, строки 723-779); hash_equals в Helper::checkServiceKey (строка 293) подтверждает исправление timing_attack JF-4; права 'D' в admin/hooks_edit.php:14-18 — стандартная GetGroupRight-проверка на месте (JF-20 fixed подтвержден). Отклоненные сигналы recon: (1) Sink: OS command tools.php:964-966 — shell_exec('top -b -n 1'), shell_exec('free -m'), shell_exec('nproc') с полностью константными командами, пользовательский ввод в команду не попадает -> не Command Injection; (2) Sink: SQL tools.php:984 — getConnection()->getType()/getVersion()/getHost()/getDatabase() — только метаданные, SQL-конкатенаций нет, ORM-запросы MethodsTable/HooksTable через Bitrix ORM с безопасным фильтром -> не SQL Injection; (3) Sink: deserialize — все unserialize вызываются с allowed_classes=false (appauth.php:43 и др.) -> безопасное использование; (4) Sink: include/require var — app.php:164 Loader::includeModule($module) — $module из MODULES метода, настроенного администратором в MethodsTable (не из запроса) -> отклонено; (5) Sink: file ops on var tools.php:246,382,821,837 — 246: fopen($path) лог-файла из настроек .settings.php (не из запроса); 382: file_put_contents($real,'') усечение лога по проверенному пути (docroot+checkFileReadAllowed); 821,837: чтение в file_getAction с docroot-ограничением, realpath и blacklist/whitelist -> покрыты находкой low file_get whitelist, прямой Path Traversal отклонен.",
+      "summary": {
+        "current_scan_findings": 8,
+        "severity_counts": {
+          "high": 1,
+          "medium": 3,
+          "low": 4
+        },
+        "new_findings": 8,
+        "still_open_findings": 0,
+        "reopened_findings": 0,
+        "resolved_since_previous_run": 5
       }
     }
   ],
@@ -1398,18 +1417,15 @@
       "fingerprint": "7d80a57132cbc734aaf76f2590c0e8de",
       "type": "Authentication Bypass",
       "severity": "high",
-      "status": "accepted_risk",
+      "status": "fixed",
       "first_seen_run_id": "awz.bxorm-1792914997",
       "last_seen_run_id": "awz.bxorm-1792914997",
-      "resolved_run_id": null,
+      "resolved_run_id": "awz.bxorm-1793180950",
       "original_location": {
         "file": "lib/api/filters/appauth.php",
         "line": "95-101"
       },
-      "current_location": {
-        "file": "lib/api/filters/appauth.php",
-        "line": "95-101"
-      },
+      "current_location": null,
       "latest_vulnerability": {
         "file": "lib/api/filters/appauth.php",
         "line": "95-101",
@@ -1455,26 +1471,34 @@
           "status": "accepted_risk",
           "note": "По умолчанию токен генерится без пользователя. Авторизация хука - это доп опция администратора.",
           "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz.bxorm-1793180950",
+          "event": "resolved",
+          "at": "2026-10-28T06:51:48+00:00",
+          "status": "fixed"
         }
-      ]
+      ],
+      "resolution": {
+        "type": "not_reproduced_after_rescan",
+        "resolved_in_run": "awz.bxorm-1793180950",
+        "reason": "The reviewed scan no longer reports a matching finding for the current archive."
+      }
     },
     {
       "journal_finding_id": "JF-00022",
       "fingerprint": "ca4f9e5338bdd43dedb3a792035dfad9",
       "type": "Information Disclosure",
       "severity": "medium",
-      "status": "accepted_risk",
+      "status": "fixed",
       "first_seen_run_id": "awz.bxorm-1792914997",
       "last_seen_run_id": "awz.bxorm-1792914997",
-      "resolved_run_id": null,
+      "resolved_run_id": "awz.bxorm-1793180950",
       "original_location": {
         "file": "lib/api/controller/mcp/tools.php",
         "line": "241-325"
       },
-      "current_location": {
-        "file": "lib/api/controller/mcp/tools.php",
-        "line": "241-325"
-      },
+      "current_location": null,
       "latest_vulnerability": {
         "file": "lib/api/controller/mcp/tools.php",
         "line": "241-325",
@@ -1520,26 +1544,34 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz.bxorm-1793180950",
+          "event": "resolved",
+          "at": "2026-10-28T06:51:48+00:00",
+          "status": "fixed"
         }
-      ]
+      ],
+      "resolution": {
+        "type": "not_reproduced_after_rescan",
+        "resolved_in_run": "awz.bxorm-1793180950",
+        "reason": "The reviewed scan no longer reports a matching finding for the current archive."
+      }
     },
     {
       "journal_finding_id": "JF-00023",
       "fingerprint": "a75e2ca46504bc8a119fd7145096bcd0",
       "type": "Cross-Site Scripting",
       "severity": "medium",
-      "status": "accepted_risk",
+      "status": "fixed",
       "first_seen_run_id": "awz.bxorm-1792914997",
       "last_seen_run_id": "awz.bxorm-1792914997",
-      "resolved_run_id": null,
+      "resolved_run_id": "awz.bxorm-1793180950",
       "original_location": {
         "file": "lib/adminpages/hooksedit.php",
         "line": "37-47"
       },
-      "current_location": {
-        "file": "lib/adminpages/hooksedit.php",
-        "line": "37-47"
-      },
+      "current_location": null,
       "latest_vulnerability": {
         "file": "lib/adminpages/hooksedit.php",
         "line": "37-47",
@@ -1585,26 +1617,34 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz.bxorm-1793180950",
+          "event": "resolved",
+          "at": "2026-10-28T06:51:48+00:00",
+          "status": "fixed"
         }
-      ]
+      ],
+      "resolution": {
+        "type": "not_reproduced_after_rescan",
+        "resolved_in_run": "awz.bxorm-1793180950",
+        "reason": "The reviewed scan no longer reports a matching finding for the current archive."
+      }
     },
     {
       "journal_finding_id": "JF-00024",
       "fingerprint": "d4fb5be16f45647f4ff81e71f661f3e3",
       "type": "Information Disclosure",
       "severity": "low",
-      "status": "accepted_risk",
+      "status": "fixed",
       "first_seen_run_id": "awz.bxorm-1792914997",
       "last_seen_run_id": "awz.bxorm-1792914997",
-      "resolved_run_id": null,
+      "resolved_run_id": "awz.bxorm-1793180950",
       "original_location": {
         "file": "lib/adminpages/hookslist.php",
         "line": "27-31"
       },
-      "current_location": {
-        "file": "lib/adminpages/hookslist.php",
-        "line": "27-31"
-      },
+      "current_location": null,
       "latest_vulnerability": {
         "file": "lib/adminpages/hookslist.php",
         "line": "27-31",
@@ -1650,26 +1690,34 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz.bxorm-1793180950",
+          "event": "resolved",
+          "at": "2026-10-28T06:51:48+00:00",
+          "status": "fixed"
         }
-      ]
+      ],
+      "resolution": {
+        "type": "not_reproduced_after_rescan",
+        "resolved_in_run": "awz.bxorm-1793180950",
+        "reason": "The reviewed scan no longer reports a matching finding for the current archive."
+      }
     },
     {
       "journal_finding_id": "JF-00025",
       "fingerprint": "380533bb82ecbefcf5e0337eac5e9572",
       "type": "Information Disclosure",
       "severity": "low",
-      "status": "accepted_risk",
+      "status": "fixed",
       "first_seen_run_id": "awz.bxorm-1792914997",
       "last_seen_run_id": "awz.bxorm-1792914997",
-      "resolved_run_id": null,
+      "resolved_run_id": "awz.bxorm-1793180950",
       "original_location": {
         "file": "lib/api/filters/nocors.php",
         "line": "31-41"
       },
-      "current_location": {
-        "file": "lib/api/filters/nocors.php",
-        "line": "31-41"
-      },
+      "current_location": null,
       "latest_vulnerability": {
         "file": "lib/api/filters/nocors.php",
         "line": "31-41",
@@ -1712,6 +1760,537 @@
           "run_id": "awz.bxorm-1792914997",
           "event": "partner_disposition_updated",
           "at": "2026-10-25T08:03:13+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz.bxorm-1793180950",
+          "event": "resolved",
+          "at": "2026-10-28T06:51:48+00:00",
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "type": "not_reproduced_after_rescan",
+        "resolved_in_run": "awz.bxorm-1793180950",
+        "reason": "The reviewed scan no longer reports a matching finding for the current archive."
+      }
+    },
+    {
+      "journal_finding_id": "JF-00026",
+      "fingerprint": "c78807769982ed28e8455a9f10ca88c8",
+      "type": "Authentication Bypass",
+      "severity": "medium",
+      "status": "accepted_risk",
+      "first_seen_run_id": "awz.bxorm-1793180950",
+      "last_seen_run_id": "awz.bxorm-1793180950",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/api/filters/appauth.php",
+        "line": "95-101"
+      },
+      "current_location": {
+        "file": "lib/api/filters/appauth.php",
+        "line": "95-101"
+      },
+      "latest_vulnerability": {
+        "file": "lib/api/filters/appauth.php",
+        "line": "95-101",
+        "type": "Authentication Bypass",
+        "severity": "medium",
+        "description": "Подтверждена имперсонализация пользователей: AppAuth-фильтр принимает ключ формата 'userId|TOKEN' и после успешной проверки токена вызывает $USER->Authorize($userAr[0]) с идентификатором пользователя из запроса. Обладатель одного валидного токена хука может действовать от имени любого пользователя, включая администратора. Уязвимость воспроизводится в текущем коде (в журнале accepted_risk JF-21).",
+        "recommendation": "Не использовать $USER->Authorize на внешнем API-слое. Если имперсонализация необходима — привязать userId к подписи токена (HMAC(userId, secret)) и ограничить список имперсонируемых пользователей настройкой хука.",
+        "fix": "Before:\nif(strpos($key, '|')!==false){\n    $userAr = explode('|',$key);\n    if(count($userAr)==2){\n        global $USER;\n        $USER->Authorize($userAr[0]);\n    }\n}\n\nAfter:\nif(strpos($key, '|')!==false){\n    $userAr = explode('|',$key);\n    if(count($userAr)==2){\n        $userId = (int)$userAr[0];\n        $allowed = \\Bitrix\\Main\\Config\\Option::get('awz.bxorm', 'impersonation_users_'.$appId, '');\n        if($userId > 0 && in_array($userId, array_map('intval', explode(',', $allowed)), true)){\n            global $USER;\n            $USER->Authorize($userId);\n        }\n    }\n}",
+        "reviewed": {
+          "oldSeverity": "high",
+          "newSeverity": "medium",
+          "changed": true,
+          "category": "authenticated-or-limited-authorization-bypass",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "verify-on-latest-version",
+          "confidence": "medium",
+          "rationale": "Set to medium because the finding describes authorization bypass or privilege misuse, but not a direct high-impact IDOR, financial bug, or confirmed account takeover in the journal text."
+        },
+        "partner_disposition": {
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski",
+          "updated_at": "2026-10-28T06:55:02+00:00"
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz.bxorm-1793180950",
+          "event": "detected",
+          "at": "2026-10-28T06:51:48+00:00",
+          "location": {
+            "file": "lib/api/filters/appauth.php",
+            "line": "95-101"
+          },
+          "status": "open"
+        },
+        {
+          "run_id": "awz.bxorm-1793180950",
+          "event": "partner_disposition_updated",
+          "at": "2026-10-28T06:55:02+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00027",
+      "fingerprint": "9abd5d99a773348890d8c5109c9b3abb",
+      "type": "IDOR",
+      "severity": "high",
+      "status": "accepted_risk",
+      "first_seen_run_id": "awz.bxorm-1793180950",
+      "last_seen_run_id": "awz.bxorm-1793180950",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/api/controller/app.php",
+        "line": "534-536"
+      },
+      "current_location": {
+        "file": "lib/api/controller/app.php",
+        "line": "534-536"
+      },
+      "latest_vulnerability": {
+        "file": "lib/api/controller/app.php",
+        "line": "534-536",
+        "type": "IDOR",
+        "severity": "high",
+        "description": "Подтверждено: в getList() параметр filter из запроса передается в ORM getList без валидации ключей против whitelist активных полей ($activeFields), в отличие от select и order, которые фильтруются. API-пользователь может фильтровать по любому полю сущности, включая скрытые/неактивные поля — перечислять данные, скрытые настройкой метода. Прежняя находка JF-18 (IDOR в app.php:484-565) помечена fixed, однако whitelist-контроль для filter в текущем коде отсутствует.",
+        "recommendation": "Валидировать ключи фильтра (включая операторы =, %, > и т.п.) против списка активных полей метода; отклонять фильтрацию по неактивным полям.",
+        "fix": "Before:\nif(isset($params['filter']) && is_array($params['filter'])){\n    $query['filter'] = $params['filter'];\n}\n\nAfter:\nif(isset($params['filter']) && is_array($params['filter'])){\n    $query['filter'] = [];\n    foreach($params['filter'] as $fk=>$fv){\n        $fKey = ltrim((string)$fk, '=<>%@*');\n        if(in_array($fKey, $activeFields, true)){\n            $query['filter'][$fk] = $fv;\n        }\n    }\n}",
+        "reviewed": {
+          "oldSeverity": "medium",
+          "newSeverity": "high",
+          "changed": true,
+          "category": "idor-or-mass-assignment-high-impact",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "add-owner-authorization-checks",
+          "confidence": "medium",
+          "rationale": "Kept/raised as high because the finding describes IDOR/mass assignment without owner checks affecting privileged or monetary behavior and reachable by an anonymous or ordinary site user."
+        },
+        "partner_disposition": {
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski",
+          "updated_at": "2026-10-28T06:55:02+00:00"
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz.bxorm-1793180950",
+          "event": "detected",
+          "at": "2026-10-28T06:51:48+00:00",
+          "location": {
+            "file": "lib/api/controller/app.php",
+            "line": "534-536"
+          },
+          "status": "open"
+        },
+        {
+          "run_id": "awz.bxorm-1793180950",
+          "event": "partner_disposition_updated",
+          "at": "2026-10-28T06:55:02+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00028",
+      "fingerprint": "a6ba9f5b73e86736700e71efff390b82",
+      "type": "Path Traversal",
+      "severity": "medium",
+      "status": "accepted_risk",
+      "first_seen_run_id": "awz.bxorm-1793180950",
+      "last_seen_run_id": "awz.bxorm-1793180950",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "449-718"
+      },
+      "current_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "449-718"
+      },
+      "latest_vulnerability": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "449-718",
+        "type": "Path Traversal",
+        "severity": "medium",
+        "description": "Подтверждено: инструмент tools/log_set (вызывается по MCP-транзиту bxmcp.callrpc) позволяет записывать лог-файл по произвольному абсолютному пути вне DOCUMENT_ROOT и в служебные каталоги (/bitrix/php_interface/ и т.п.). Дополнительно params.class_name принимает произвольное имя класса обработчика лога без проверки существования — класс инстанцируется Bitrix при обработке исключений. Воспроизводится прежняя находка JF-22 (accepted_risk, medium).",
+        "recommendation": "Ограничить путь лога каталогом внутри DOCUMENT_ROOT (например /local/logs/), запретить запись в /bitrix/php_interface/ по умолчанию; для class_name проверять существование класса и допускать только наследников \\Bitrix\\Main\\Diag\\ExceptionHandlerLog.",
+        "fix": "Before:\n$className = '';\nif(isset($extra['class_name']) && is_string($extra['class_name']) && trim($extra['class_name'])!==''){\n    $className = trim($extra['class_name']);\n}\n\nAfter:\n$className = '';\nif(isset($extra['class_name']) && is_string($extra['class_name']) && trim($extra['class_name'])!==''){\n    $candidate = trim($extra['class_name']);\n    if(class_exists($candidate) && is_subclass_of($candidate, '\\\\Bitrix\\\\Main\\\\Diag\\\\ExceptionHandlerLog')){\n        $className = $candidate;\n    }else{\n        throw new \\Exception('недопустимый class_name: класс не найден или не является ExceptionHandlerLog');\n    }\n}",
+        "reviewed": {
+          "oldSeverity": "medium",
+          "newSeverity": "medium",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        },
+        "partner_disposition": {
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski",
+          "updated_at": "2026-10-28T06:55:02+00:00"
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz.bxorm-1793180950",
+          "event": "detected",
+          "at": "2026-10-28T06:51:48+00:00",
+          "location": {
+            "file": "lib/api/controller/mcp/tools.php",
+            "line": "449-718"
+          },
+          "status": "open"
+        },
+        {
+          "run_id": "awz.bxorm-1793180950",
+          "event": "partner_disposition_updated",
+          "at": "2026-10-28T06:55:02+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00029",
+      "fingerprint": "a374f80aa84c59e8c93d00494a651720",
+      "type": "Cross-Site Scripting",
+      "severity": "medium",
+      "status": "accepted_risk",
+      "first_seen_run_id": "awz.bxorm-1793180950",
+      "last_seen_run_id": "awz.bxorm-1793180950",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/adminpages/hooksedit.php",
+        "line": "37-47"
+      },
+      "current_location": {
+        "file": "lib/adminpages/hooksedit.php",
+        "line": "37-47"
+      },
+      "latest_vulnerability": {
+        "file": "lib/adminpages/hooksedit.php",
+        "line": "37-47",
+        "type": "Cross-Site Scripting",
+        "severity": "medium",
+        "description": "Подтверждено: HooksEdit::getFieldValue() при незаполненной форме ($this->saved === false) возвращает значение $_REQUEST[$name] без экранирования (htmlspecialcharsEx/htmlspecialcharsbx). Значение попадает в value-атрибуты и SELECT-опции админ-формы (awz.admin handler_el) — reflected XSS в админ-панели. Воспроизводится прежняя находка JF-23 (accepted_risk, medium); в MethodsEdit экранирование реализовано, в HooksEdit — нет.",
+        "recommendation": "Экранировать значения из $_REQUEST аналогично MethodsEdit::getFieldValue — htmlspecialcharsEx или htmlspecialcharsbx перед возвратом.",
+        "fix": "Before:\nif(!$this->saved) {\n    $value = (isset($_REQUEST[$name]) && array_key_exists($name, $_REQUEST)) ? $_REQUEST[$name] : $defValue;\n}\n\nAfter:\nif(!$this->saved) {\n    $value = (isset($_REQUEST[$name]) && array_key_exists($name, $_REQUEST)) ? $_REQUEST[$name] : $defValue;\n    if(is_scalar($value)){\n        $value = htmlspecialcharsbx((string)$value);\n    }\n}",
+        "reviewed": {
+          "oldSeverity": "medium",
+          "newSeverity": "medium",
+          "changed": false,
+          "category": "xss-unclear-source",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "validate-source-and-fix-escaping",
+          "confidence": "low",
+          "rationale": "Adjusted conservatively because the journal does not clearly prove a low-privileged or public payload source. Confirm source permissions before treating as a blocker."
+        },
+        "partner_disposition": {
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski",
+          "updated_at": "2026-10-28T06:55:02+00:00"
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz.bxorm-1793180950",
+          "event": "detected",
+          "at": "2026-10-28T06:51:48+00:00",
+          "location": {
+            "file": "lib/adminpages/hooksedit.php",
+            "line": "37-47"
+          },
+          "status": "open"
+        },
+        {
+          "run_id": "awz.bxorm-1793180950",
+          "event": "partner_disposition_updated",
+          "at": "2026-10-28T06:55:02+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00030",
+      "fingerprint": "edcd1d931fdd928d9523688d83b6495e",
+      "type": "IDOR",
+      "severity": "low",
+      "status": "accepted_risk",
+      "first_seen_run_id": "awz.bxorm-1793180950",
+      "last_seen_run_id": "awz.bxorm-1793180950",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/api/controller/app.php",
+        "line": "404-440"
+      },
+      "current_location": {
+        "file": "lib/api/controller/app.php",
+        "line": "404-440"
+      },
+      "latest_vulnerability": {
+        "file": "lib/api/controller/app.php",
+        "line": "404-440",
+        "type": "IDOR",
+        "severity": "low",
+        "description": "Подтверждено: метод add() фильтрует входные поля только по isActive и игнорирует флаг isReadOnly, тогда как update() проверяет isReadOnly !== 'Y' (строка 445). API-пользователь может задавать системные/вычисляемые поля (например DATE_CREATE, статусы) при создании записи. Воспроизводится прежняя находка JF-19 (low).",
+        "recommendation": "Добавить проверку isReadOnly в add() аналогично update().",
+        "fix": "Before:\nforeach($fieldsParams as $fieldKey=>$fieldValue){\n    if($fieldValue['isActive'] === 'Y'){\n        $activeFields[] = $fieldKey;\n    }\n}\n\nAfter:\nforeach($fieldsParams as $fieldKey=>$fieldValue){\n    if($fieldValue['isActive'] === 'Y' && $fieldValue['isReadOnly'] !== 'Y'){\n        if(mb_strpos($fieldKey, '.')!==false) continue;\n        $activeFields[] = $fieldKey;\n    }\n}",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "low",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        },
+        "partner_disposition": {
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski",
+          "updated_at": "2026-10-28T06:55:02+00:00"
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz.bxorm-1793180950",
+          "event": "detected",
+          "at": "2026-10-28T06:51:48+00:00",
+          "location": {
+            "file": "lib/api/controller/app.php",
+            "line": "404-440"
+          },
+          "status": "open"
+        },
+        {
+          "run_id": "awz.bxorm-1793180950",
+          "event": "partner_disposition_updated",
+          "at": "2026-10-28T06:55:02+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00031",
+      "fingerprint": "9d3f93ee1e3a25edbbfbfd0828486ac2",
+      "type": "Information Disclosure",
+      "severity": "low",
+      "status": "accepted_risk",
+      "first_seen_run_id": "awz.bxorm-1793180950",
+      "last_seen_run_id": "awz.bxorm-1793180950",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/helper.php",
+        "line": "174-182"
+      },
+      "current_location": {
+        "file": "lib/helper.php",
+        "line": "174-182"
+      },
+      "latest_vulnerability": {
+        "file": "lib/helper.php",
+        "line": "174-182",
+        "type": "Information Disclosure",
+        "severity": "low",
+        "description": "Подтверждено: getMcpUrl() формирует URL подключения MCP-клиента с токеном в GET-параметре ('...&key='.$token, строка 179). Токен попадает в access-логи веб-сервера, прокси, историю браузера. Воспроизводится прежняя находка JF-24 (low, token_in_url).",
+        "recommendation": "Передавать токен через заголовок Authorization (поддерживается AppAuth) или POST; для отображаемого URL выдавать токен отдельно и не включать его в публично копируемую ссылку.",
+        "fix": "Before:\nif($token){\n    $url .= '&key='.$token;\n}\n\nAfter:\n// токен в URL не включается; клиент передает его в заголовке Authorization: Bearer <token>\n// AppAuth::onBeforeAction уже поддерживает заголовок Authorization",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "low",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        },
+        "partner_disposition": {
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski",
+          "updated_at": "2026-10-28T06:55:02+00:00"
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz.bxorm-1793180950",
+          "event": "detected",
+          "at": "2026-10-28T06:51:48+00:00",
+          "location": {
+            "file": "lib/helper.php",
+            "line": "174-182"
+          },
+          "status": "open"
+        },
+        {
+          "run_id": "awz.bxorm-1793180950",
+          "event": "partner_disposition_updated",
+          "at": "2026-10-28T06:55:02+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00032",
+      "fingerprint": "1c0a5644c7dc0808d546e546fed1bde7",
+      "type": "Information Disclosure",
+      "severity": "low",
+      "status": "accepted_risk",
+      "first_seen_run_id": "awz.bxorm-1793180950",
+      "last_seen_run_id": "awz.bxorm-1793180950",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/api/filters/nocors.php",
+        "line": "31-41"
+      },
+      "current_location": {
+        "file": "lib/api/filters/nocors.php",
+        "line": "31-41"
+      },
+      "latest_vulnerability": {
+        "file": "lib/api/filters/nocors.php",
+        "line": "31-41",
+        "type": "Information Disclosure",
+        "severity": "low",
+        "description": "Подтверждено: NoCors-фильтр отражает в Access-Control-Allow-Origin любой Origin из запроса (или '*'), без allowlist. Позволяет сторонним сайтам выполнять кросс-доменные запросы к API (токен-авторизация не зависит от cookies, поэтому прямой CSRF невозможен, но при наличии токена в браузерном клиенте Origin-флексибилити расширяет поверхность атаки). Воспроизводится прежняя находка JF-25 (low, cors_misconfiguration).",
+        "recommendation": "Валидировать Origin по опции-allowlist (например mcp_cors_origins); при отсутствии совпадения не устанавливать Access-Control-Allow-Origin.",
+        "fix": "Before:\n$origin = $this->origin ?: \\Bitrix\\Main\\Context::getCurrent()->getRequest()->getHeader('Origin');\nif ($origin){\n    $response->addHeader('Access-Control-Allow-Origin', $origin);\n}else{\n    $response->addHeader('Access-Control-Allow-Origin', \"*\");\n}\n\nAfter:\n$origin = $this->origin ?: \\Bitrix\\Main\\Context::getCurrent()->getRequest()->getHeader('Origin');\n$allowed = array_filter(array_map('trim', explode(',', (string)\\Bitrix\\Main\\Config\\Option::get('awz.bxorm', 'mcp_cors_origins', ''))));\nif($origin && in_array((string)$origin, $allowed, true)){\n    $response->addHeader('Access-Control-Allow-Origin', (string)$origin);\n}\n// без allowlist — CORS-заголовок не устанавливается",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "low",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        },
+        "partner_disposition": {
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski",
+          "updated_at": "2026-10-28T06:55:02+00:00"
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz.bxorm-1793180950",
+          "event": "detected",
+          "at": "2026-10-28T06:51:48+00:00",
+          "location": {
+            "file": "lib/api/filters/nocors.php",
+            "line": "31-41"
+          },
+          "status": "open"
+        },
+        {
+          "run_id": "awz.bxorm-1793180950",
+          "event": "partner_disposition_updated",
+          "at": "2026-10-28T06:55:02+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00033",
+      "fingerprint": "ddf2d0244aa00b07ee5197ab45aa1ef4",
+      "type": "Information Disclosure",
+      "severity": "low",
+      "status": "accepted_risk",
+      "first_seen_run_id": "awz.bxorm-1793180950",
+      "last_seen_run_id": "awz.bxorm-1793180950",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "723-779"
+      },
+      "current_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "723-779"
+      },
+      "latest_vulnerability": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "723-779",
+        "type": "Information Disclosure",
+        "severity": "low",
+        "description": "Подтверждено: инструмент tools/file_get ограничен корнем сайта, черным списком служебных файлов (dbconn.php, .settings.php, .env и т.д.) и каталогов (bitrix/backup/ и т.п.), но дефолтный whitelist каталогов mcp_file_whitelist включает /bitrix/php_interface/, /bitrix/modules/, /local/ — владелец токена может прочитать исходный код всех модулей и кастомной логики сайта. Прежняя находка JF-22 (accepted_risk, medium) в части file_get смягчена blacklist'ом; остаточный риск — чтение исходников по широкому дефолтному whitelist.",
+        "recommendation": "Сузить дефолтный whitelist (например только /upload/ и /local/logs/), требовать явной настройки для /bitrix/php_interface/ и /bitrix/modules/.",
+        "fix": "Before:\n(string)\\Bitrix\\Main\\Config\\Option::get('awz.bxorm', 'mcp_file_whitelist',\n    '/bitrix/php_interface/,/bitrix/modules/,/local/,/upload/')\n\nAfter:\n(string)\\Bitrix\\Main\\Config\\Option::get('awz.bxorm', 'mcp_file_whitelist',\n    '/upload/,/local/logs/')",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "low",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        },
+        "partner_disposition": {
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski",
+          "updated_at": "2026-10-28T06:55:02+00:00"
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz.bxorm-1793180950",
+          "event": "detected",
+          "at": "2026-10-28T06:51:48+00:00",
+          "location": {
+            "file": "lib/api/controller/mcp/tools.php",
+            "line": "723-779"
+          },
+          "status": "open"
+        },
+        {
+          "run_id": "awz.bxorm-1793180950",
+          "event": "partner_disposition_updated",
+          "at": "2026-10-28T06:55:02+00:00",
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski"
