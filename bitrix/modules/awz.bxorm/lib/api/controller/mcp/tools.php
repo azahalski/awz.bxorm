@@ -135,6 +135,74 @@ class Tools extends App
     }
 
     /**
+     * Определяет путь лог-файла по настройкам (не от пользователя):
+     * type=exception_handling — файл из .settings.php секции log (settings.file, может быть полным путем);
+     * type=<имя логгера> — файл из constructorParams логгера \Bitrix\Main\Diag\FileLogger.
+     * Возвращает ['ok'=>bool, 'path'=>string, 'msg'=>string, 'configured'=>bool]
+     * (configured=false — лог не настроен/отключен; ok=true, файла может еще не существовать)
+     */
+    private function resolveLogFilePath(string $type): array
+    {
+        $res = ['ok' => false, 'path' => '', 'msg' => '', 'configured' => false];
+        $configuration = \Bitrix\Main\Config\Configuration::getInstance();
+        if($type === 'exception_handling'){
+            $logConfig = (array)($configuration->get('exception_handling') ?? []);
+            $settings = (array)($logConfig['log']['settings'] ?? []);
+            if(empty($logConfig['debug'])){
+                $res['msg'] = 'Лог отключен. Сначала вызовите log_set с параметром file.';
+                return $res;
+            }
+            $res['configured'] = true;
+            $settingsFile = str_replace('\\', '/', (string)($settings['file'] ?? ''));
+            if($settingsFile === ''){
+                $res['msg'] = 'Лог не настроен. Сначала вызовите log_set с параметром file.';
+                return $res;
+            }
+            //в settings.file может быть указан полный путь (абсолютный или от корня диска)
+            $res['path'] = preg_match('#^([/\\\\]|[a-zA-Z]:[/\\\\])#', $settingsFile)
+                ? $settingsFile
+                : \Bitrix\Main\Application::getDocumentRoot().'/'.ltrim($settingsFile, '/');
+        }else{
+            $loggers = (array)($configuration->get('loggers') ?? []);
+            //поддержка обеих структур: правильная get() => [имя=>логгер] и старая битая ['value'=>[...]]
+            if(isset($loggers['value']) && is_array($loggers['value'])){
+                $loggers = $loggers['value'];
+            }
+            if(!isset($loggers[$type])){
+                $res['msg'] = 'Логгер не найден в .settings.php (секция loggers): '.$type;
+                return $res;
+            }
+            $res['configured'] = true;
+            $logger = (array)$loggers[$type];
+            $className = (string)($logger['className'] ?? '');
+            if($className !== '\\'.'Bitrix\\Main\\Diag\\FileLogger' && strtolower($className) !== strtolower('\\Bitrix\\Main\\Diag\\FileLogger')){
+                $res['msg'] = 'Работают только логи класса \Bitrix\Main\Diag\FileLogger, у логгера: '.$className;
+                return $res;
+            }
+            $cp = $logger['constructorParams'] ?? null;
+            if($cp instanceof \Closure){
+                $cpArgs = (array)$cp();
+            }elseif(is_string($cp) && $cp !== ''){
+                $cpArgs = [$cp];
+            }elseif(is_array($cp)){
+                $cpArgs = $cp;
+            }else{
+                $cpArgs = [];
+            }
+            $cpFile = str_replace('\\', '/', (string)($cpArgs[0] ?? ''));
+            if($cpFile === ''){
+                $res['msg'] = 'Не удалось определить файл логгера из constructorParams: '.$type;
+                return $res;
+            }
+            $res['path'] = (preg_match('#^[/\\\\]#', $cpFile) || preg_match('#^[a-zA-Z]:[/\\\\]#', $cpFile))
+                ? $cpFile
+                : \Bitrix\Main\Application::getDocumentRoot().'/'.ltrim($cpFile, '/');
+        }
+        $res['ok'] = true;
+        return $res;
+    }
+
+    /**
      * Возвращает содержимое лог-файла Битрикса.
      * Путь задается только настройками (не передается пользователем):
      * - type=exception_handling (по умолчанию) — файл из .settings.php секции log (settings.file);
@@ -148,61 +216,23 @@ class Tools extends App
             $type = trim($type);
             if($type === '') $type = 'exception_handling';
 
-            $path = '';
-            if($type === 'exception_handling'){
-                //файл из настроек .settings.php секции log
-                $logConfig = (array)(\Bitrix\Main\Config\Configuration::getInstance()->get('log') ?? []);
-                $settings = (array)($logConfig['settings'] ?? []);
-                if(!empty($settings['file'])){
-                    $path = \Bitrix\Main\Application::getDocumentRoot().'/'.ltrim((string)$settings['file'], '/');
-                }
-                if($path === ''){
-                    return [
-                        'content' => [['type' => 'text', 'text' => 'Лог не настроен. Сначала вызовите log_set с параметром file.']],
-                        'isError' => true
-                    ];
-                }
-            }else{
-                //файл PSR-логгера из .settings.php секции loggers
-                $loggers = (array)(\Bitrix\Main\Config\Configuration::getInstance()->get('loggers') ?? []);
-                $loggers = (array)($loggers['value'] ?? []);
-                if(!isset($loggers[$type])){
-                    return [
-                        'content' => [['type' => 'text', 'text' => 'Логгер не найден в .settings.php (секция loggers): '.$type]],
-                        'isError' => true
-                    ];
-                }
-                $logger = (array)$loggers[$type];
-                $className = (string)($logger['className'] ?? '');
-                if($className !== '\\'.'Bitrix\\Main\\Diag\\FileLogger' && strtolower($className) !== strtolower('\\Bitrix\\Main\\Diag\\FileLogger')){
-                    return [
-                        'content' => [['type' => 'text', 'text' => 'Читаются только логи класса \Bitrix\Main\Diag\FileLogger, у логгера: '.$className]],
-                        'isError' => true
-                    ];
-                }
-                $cp = $logger['constructorParams'] ?? null;
-                if($cp instanceof \Closure){
-                    $cpArgs = (array)$cp();
-                }elseif(is_string($cp) && $cp !== ''){
-                    $cpArgs = [$cp];
-                }elseif(is_array($cp)){
-                    $cpArgs = $cp;
-                }else{
-                    $cpArgs = [];
-                }
-                $cpFile = (string)($cpArgs[0] ?? '');
-                if($cpFile === ''){
-                    return [
-                        'content' => [['type' => 'text', 'text' => 'Не удалось определить файл логгера из constructorParams: '.$type]],
-                        'isError' => true
-                    ];
-                }
-                $path = (preg_match('#^[/\\\\]#', $cpFile) || preg_match('#^[a-zA-Z]:[/\\\\]#', $cpFile))
-                    ? $cpFile
-                    : \Bitrix\Main\Application::getDocumentRoot().'/'.ltrim($cpFile, '/');
+            $resolved = $this->resolveLogFilePath($type);
+            if(!$resolved['ok']){
+                return [
+                    'content' => [['type' => 'text', 'text' => $resolved['msg']]],
+                    'isError' => true
+                ];
             }
+            $path = $resolved['path'];
 
             if(!is_file($path)){
+                //файл может быть еще не создан — Bitrix создает его при первой записи
+                if($resolved['configured']){
+                    return [
+                        'content' => [['type' => 'text', 'text' => 'Лог настроен, но файл ещё не создан (создается при первой записи): '.$path
+                            .'. Если записей нет — проверьте, что вызовы действительно генерируют ошибки/записи.']]
+                    ];
+                }
                 return [
                     'content' => [['type' => 'text', 'text' => 'Файл не найден: '.basename($path)]],
                     'isError' => true
@@ -234,16 +264,224 @@ class Tools extends App
     }
 
     /**
+     * Отключает логирование.
+     * type=exception_handling (по умолчанию) — удаляется секция log из exception_handling в .settings.php.
+     * type=<имя логгера> — логгер удаляется из секции loggers.
+     */
+    public function log_offAction(string $type = 'exception_handling')
+    {
+        try{
+            $configuration = \Bitrix\Main\Config\Configuration::getInstance();
+            $type = trim($type);
+            if($type === '') $type = 'exception_handling';
+
+            //.settings.php должен быть доступен на запись ДО изменения конфига
+            $docRootOff = \Bitrix\Main\Application::getDocumentRoot();
+            $settingsPathOff = $docRootOff.'/bitrix/.settings.php';
+            if(!is_file($settingsPathOff)) $settingsPathOff = $docRootOff.'/.settings.php';
+            if(is_file($settingsPathOff) && !is_writable($settingsPathOff)){
+                throw new \Exception('файл настроек недоступен для записи: '.$settingsPathOff.' — конфиг не изменен, проверьте права');
+            }
+
+            if($type === 'exception_handling'){
+                $logConfig = (array)($configuration->get('exception_handling') ?? []);
+                $logConfig['debug'] = false;
+                if(isset($logConfig['log'])){
+                    unset($logConfig['log']);
+                }
+                //мусорные верхнеуровневые ключи (остатки прошлых версий: 'settings', NULL-секции) — убираем
+                if(isset($logConfig['settings'])){
+                    unset($logConfig['settings']);
+                }
+                $configuration->add('exception_handling', $logConfig);
+                $this->sanitizeLoggersForSave();
+                $configuration->saveConfiguration();
+                return [
+                    'content' => [['type' => 'text', 'text' => 'Системный лог отключен: debug=false, секция log удалена из exception_handling в .settings.php.']]
+                ];
+            }else{
+                $type = preg_replace('/[^0-9a-zA-Z._-]/', '', $type);
+                $loggersConfig = (array)($configuration->get('loggers') ?? []);
+                if(isset($loggersConfig['value']) && is_array($loggersConfig['value'])){
+                    //старая битая структура (двойная вложенность value.value)
+                    $loggers = (array)$loggersConfig['value'];
+                }else{
+                    $loggers = $loggersConfig;
+                }
+                if(!isset($loggers[$type])){
+                    return [
+                        'content' => [['type' => 'text', 'text' => 'Логгер не найден в .settings.php (секция loggers): '.$type]],
+                        'isError' => true
+                    ];
+                }
+                unset($loggers[$type]);
+                if(!empty($loggers)){
+                    //add() сам оборачивает в 'value' — передаем карту напрямую
+                    $configuration->add('loggers', $loggers);
+                }else{
+                    $configuration->delete('loggers');
+                }
+                $dropped = $this->sanitizeLoggersForSave();
+                $configuration->saveConfiguration();
+                return [
+                    'content' => [['type' => 'text', 'text' => (empty($loggers)
+                        ? 'PSR-логгер «'.$type.'» удален: секция loggers полностью удалена из .settings.php, логирование через него отключено.'
+                        : 'PSR-логгер «'.$type.'» удален из секции loggers, логирование через него отключено.')
+                        .(($dropped) ? ' Из сохранения удалены логгеры с несериализуемыми constructorParams (Closure): '.implode(', ', $dropped) : '')]]
+                ];
+            }
+        }catch(\Throwable $e){
+            return ['content'=>[['type'=>'text','text'=>'tool log_off error: '.$e->getMessage()]], 'isError'=>true];
+        }
+    }
+
+    /**
+     * Усекает (ротирует) лог-файл: содержимое обнуляется, файл и настройки сохраняются.
+     * type=exception_handling (по умолчанию) — файл из секции log .settings.php;
+     * type=<имя логгера> — файл PSR-логгера из секции loggers (\Bitrix\Main\Diag\FileLogger).
+     * file — необязательный явный путь (абсолютный или от корня сайта, внутри DOCUMENT_ROOT,
+     * те же ограничения, что у file_get).
+     */
+    public function log_clearAction(string $type = 'exception_handling', string $file = '')
+    {
+        try{
+            $type = trim($type);
+            if($type === '') $type = 'exception_handling';
+
+            if(trim($file) !== ''){
+                //явный путь: те же проверки, что в file_get
+                $docRoot = \Bitrix\Main\Application::getDocumentRoot();
+                $path = (preg_match('#^([/\\\\]|[a-zA-Z]:[/\\\\])#', $file)) ? $file : $docRoot.'/'.$file;
+                $real = realpath($path);
+                $rootReal = realpath($docRoot);
+                if(!$real || $rootReal === false || !str_starts_with($real, $rootReal)){
+                    return ['content'=>[['type'=>'text','text'=>'путь вне корня сайта или не существует: '.$file]], 'isError'=>true];
+                }
+                $denyReason = $this->checkFileReadAllowed($real);
+                if($denyReason !== ''){
+                    return ['content'=>[['type'=>'text','text'=>$denyReason]], 'isError'=>true];
+                }
+                if(!is_file($real)){
+                    return ['content'=>[['type'=>'text','text'=>'файл не найден: '.$real]], 'isError'=>true];
+                }
+            }else{
+                $resolved = $this->resolveLogFilePath($type);
+                if(!$resolved['ok']){
+                    return ['content'=>[['type'=>'text','text'=>$resolved['msg']]], 'isError'=>true];
+                }
+                $real = realpath($resolved['path']);
+                if(!$real || !is_file($real)){
+                    return ['content'=>[['type'=>'text','text'=>'Файл ещё не создан, усекать нечего: '.$resolved['path']]]];
+                }
+            }
+
+            if(!is_writable($real)){
+                return ['content'=>[['type'=>'text','text'=>'файл недоступен для записи: '.$real]], 'isError'=>true];
+            }
+            $sizeBefore = (int)filesize($real);
+            if(file_put_contents($real, '') === false){
+                return ['content'=>[['type'=>'text','text'=>'не удалось усечь файл: '.$real]], 'isError'=>true];
+            }
+            clearstatcache(true, $real);
+
+            return [
+                'content' => [['type' => 'text', 'text' => 'Лог усечен: '.$real
+                    .' (было: '.$sizeBefore.' байт, стало: '.filesize($real).' байт). Логирование продолжает работать.']]
+            ];
+        }catch(\Throwable $e){
+            return ['content'=>[['type'=>'text','text'=>'tool log_clear error: '.$e->getMessage()]], 'isError'=>true];
+        }
+    }
+
+    /**
+     * Санитизация секции loggers перед saveConfiguration: var_export не умеет сериализовать
+     * Closure (constructorParams чужих логгеров) — в .settings.php попадает \Closure::__set_state
+     * и сайт падает 500. Closure вызывается (так же делает Diag\Logger) для получения аргументов;
+     * если вызвать не удалось — логгер удаляется из сохраняемой секции.
+     * Возвращает список удаленных логгеров.
+     */
+    private function sanitizeLoggersForSave(): array
+    {
+        $configuration = \Bitrix\Main\Config\Configuration::getInstance();
+        $loggers = (array)($configuration->get('loggers') ?? []);
+        if(isset($loggers['value']) && is_array($loggers['value'])){
+            $loggers = $loggers['value'];
+        }
+        $fixed = [];
+        $dropped = [];
+        foreach($loggers as $id => $entry){
+            if(!is_array($entry)){
+                $fixed[$id] = $entry;
+                continue;
+            }
+            $cp = $entry['constructorParams'] ?? null;
+            if($cp instanceof \Closure){
+                try{
+                    $args = $cp();
+                }catch(\Throwable $e){
+                    $args = null;
+                }
+                if(is_array($args)){
+                    $entry['constructorParams'] = $args;
+                    $fixed[$id] = $entry;
+                }else{
+                    $dropped[] = (string)$id;
+                }
+            }else{
+                $fixed[$id] = $entry;
+            }
+        }
+        if(!empty($fixed)){
+            $configuration->add('loggers', $fixed);
+        }else{
+            $configuration->delete('loggers');
+        }
+        return $dropped;
+    }
+
+    /**
      * Настраивает лог-файл Битрикса.
      * type=exception_handling (по умолчанию) — стандартный лог: секция log в .settings.php.
      * type=<имя логгера> — PSR-лог: создается/обновляется логгер с этим именем в секции loggers.
+     * params — дополнительные параметры секции log/settings (class_name, log_size, log_error,
+     * log_file_size, date_format, trace_format и т.п.) — JSON-строка или ассоциативный массив.
      */
-    public function log_setAction(string $file = '', int $sizeMb = 20, string $level = 'debug', string $type = 'exception_handling')
+    public function log_setAction(string $file = '', $size_mb = 20, string $level = 'debug', string $type = 'exception_handling', $params = [])
     {
         try{
-            $file = preg_replace('/[^a-zA-Z0-9._-]/', '', basename($file));
-            if($file === '' || $file === '.' || $file === '..'){
-                throw new \Exception('не указано имя файла (параметр file)');
+            //параметры берем напрямую из запроса (binder может не сматчить имена аргументов)
+            $req = $this->getRequest();
+            $reqGet = function(string $key) use ($req){
+                $val = $req->get($key);
+                return is_string($val) ? $val : (is_scalar($val) ? (string)$val : null);
+            };
+            $rFile = $reqGet('file');
+            if($rFile !== null && trim($rFile) !== '') $file = $rFile;
+            $rSize = $reqGet('size_mb');
+            if($rSize !== null && trim($rSize) !== '') $size_mb = $rSize;
+            $rLevel = $reqGet('level');
+            if($rLevel !== null && trim($rLevel) !== '') $level = $rLevel;
+            $rType = $reqGet('type');
+            if($rType !== null && trim($rType) !== '') $type = $rType;
+            $rParams = $req->get('params');
+            if(is_string($rParams) && trim($rParams) !== '') $params = $rParams;
+            elseif(is_array($rParams) && !empty($rParams) && !isset($rParams['name']) && !isset($rParams['arguments'])) $params = $rParams;
+
+            $sizeMb = (int)$size_mb;
+            //в file можно передать либо имя файла (каталог выбирается автоматически),
+            //либо полный путь (абсолютный, например /var/www/.../exceptions.log)
+            $fileRaw = str_replace('\\', '/', trim($file));
+            $isFullPath = (bool)preg_match('#^([/\\\\]|[a-zA-Z]:[/\\\\])#', str_replace('\\','/',$file));
+            if($isFullPath){
+                $file = preg_replace('/[^a-zA-Z0-9._\-\/]/', '', $fileRaw);
+                if($file === '' || in_array(basename($file), ['', '.', '..'], true)){
+                    throw new \Exception('не указано имя файла (параметр file)');
+                }
+            }else{
+                $file = preg_replace('/[^a-zA-Z0-9._-]/', '', basename($fileRaw));
+                if($file === '' || $file === '.' || $file === '..'){
+                    throw new \Exception('не указано имя файла (параметр file)');
+                }
             }
             $sizeMb = min(512, max(1, $sizeMb));
             $sizeBytes = $sizeMb * 1024 * 1024;
@@ -258,6 +496,18 @@ class Tools extends App
                 throw new \Exception('недопустимый уровень лога (параметр level): '.$level.'. Допустимо: '.implode(', ', $allowedLevels));
             }
 
+            //доп. параметры системного лога (JSON-строка или массив)
+            $extra = [];
+            if(is_string($params) && trim($params) !== ''){
+                $decoded = json_decode($params, true);
+                if(!is_array($decoded)){
+                    throw new \Exception('некорректный JSON в параметре params (ожидается объект вида {"log_size":1000000})');
+                }
+                $extra = $decoded;
+            }elseif(is_array($params)){
+                $extra = $params;
+            }
+
             //тип лога: как в log_get — exception_handling или имя PSR-логгера
             $type = trim($type);
             if($type === '') $type = 'exception_handling';
@@ -268,10 +518,13 @@ class Tools extends App
                 }
             }
 
-            //каталог размещения лог-файла: константа AWZ_BXORM_LOG_PATH имеет приоритет,
-            //затем существующий /local/logs/, затем /local/php_interface/, иначе /bitrix/php_interface/
+            //каталог размещения лог-файла (только для относительного file): константа AWZ_BXORM_LOG_PATH
+            //имеет приоритет, затем существующий /local/logs/, затем /local/php_interface/, иначе /bitrix/php_interface/
             $docRoot = \Bitrix\Main\Application::getDocumentRoot();
-            if(defined('AWZ_BXORM_LOG_PATH') && is_string(AWZ_BXORM_LOG_PATH) && AWZ_BXORM_LOG_PATH !== ''){
+            if($isFullPath){
+                //полный путь передан в file — используем как есть
+                $relative = $file;
+            }elseif(defined('AWZ_BXORM_LOG_PATH') && is_string(AWZ_BXORM_LOG_PATH) && AWZ_BXORM_LOG_PATH !== ''){
                 $dir = rtrim(str_replace('\\','/', AWZ_BXORM_LOG_PATH), '/');
                 $relative = preg_match('#^[/\\\\]#', $dir) ? ltrim($dir, '/') : $dir;
             }elseif(is_dir($docRoot.'/local/logs')){
@@ -283,32 +536,172 @@ class Tools extends App
             }
 
             $configuration = \Bitrix\Main\Config\Configuration::getInstance();
-            $logPath = (preg_match('#^[/\\\\]#', $relative) ? '' : $docRoot.'/').$relative.'/'.$file;
+
+            //файл должен определиться к этому моменту — иначе молча сохранится битая секция
+            if(trim($file) === ''){
+                throw new \Exception('не удалось определить имя файла (параметр file потерян при разборе запроса): file="'.(string)$file
+                    .'", request.file="'.(string)($reqGet('file') ?? 'null')
+                    .'", params_keys='.(is_array($params) ? implode(',', array_keys($params)) : gettype($params))
+                    .' — конфиг не изменен');
+            }
+
+            //.settings.php должен быть доступен на запись ДО изменения конфига в памяти
+            $settingsPath = $docRoot.'/bitrix/.settings.php';
+            if(!is_file($settingsPath)){
+                $settingsPath = $docRoot.'/.settings.php';
+            }
+            if(!is_file($settingsPath)){
+                throw new \Exception('не найден .settings.php (ожидали bitrix/.settings.php)');
+            }
+            if(!is_writable($settingsPath)){
+                throw new \Exception('файл настроек недоступен для записи: '.$settingsPath.' — конфиг не изменен, проверьте права');
+            }
+
+            if($isFullPath){
+                //полный путь уже содержит имя файла
+                $logPath = $file;
+            }else{
+                $logPath = (preg_match('#^[/\\\\]#', $relative) ? '' : $docRoot.'/').$relative.'/'.$file;
+            }
 
             $texts = [];
 
             //exception_handling — стандартный лог: настраивается секция log
             if($type === 'exception_handling'){
-                $logConfig = (array)($configuration->get('log') ?? []);
-                $settings = (array)($logConfig['settings'] ?? []);
-                $settings['file'] = $relative.'/'.$file;
-                $settings['log_error'] = true;
-                $settings['log_file_size'] = $sizeBytes;
-                $configuration->add('log', ['settings' => $settings]);
-                $texts[] = 'Стандартный лог настроен: /'.$settings['file'].' (создастся при первой записи), максимальный размер до ротации: '.$sizeMb.' МБ ('.$sizeBytes.' байт), log_error: on. Читать: log_get с type=exception_handling.';
+                $logConfig = (array)($configuration->get('exception_handling') ?? []);
+                //'log' может оказаться NULL/не-массивом (битое состояние в .settings.php) — нормализуем
+                if(!isset($logConfig['log']) || !is_array($logConfig['log'])){
+                    $logConfig['log'] = [];
+                }
+                //ЕДИНСТВЕННЫЙ источник истины — локальный $settings; в $logConfig записываем один раз в конце
+                $settings = (array)($logConfig['log']['settings'] ?? []);
+
+                //базовые значения из параметров log_set.
+                //FileExceptionHandlerLog читает file + log_size (байты) — см. main/lib/diag/fileexceptionhandlerlog.php
+                //путь храним ОТНОСИТЕЛЬНЫМ (от DOCUMENT_ROOT): FileExceptionHandlerLog сам приклеивает docRoot
+                $fileSetting = $isFullPath ? $file : $relative.'/'.$file;
+                if(preg_match('#^([/\\\\]|[a-zA-Z]:[/\\\\])#', $fileSetting)){
+                    $docRootNorm = rtrim(str_replace('\\', '/', $docRoot), '/');
+                    $fileNorm = str_replace('\\', '/', $fileSetting);
+                    if($docRootNorm !== '' && stripos($fileNorm, $docRootNorm.'/') === 0){
+                        $fileSetting = ltrim(substr($fileNorm, strlen($docRootNorm)), '/');
+                    }
+                    //вне DOCUMENT_ROOT относительным быть не может — останется абсолютным
+                }
+                $settings['file'] = $fileSetting;
+                $settings['log_size'] = $sizeBytes;
+
+                //файл должен определиться — иначе сохраним битую секцию с пустым file
+                if(trim((string)$settings['file']) === '' || basename((string)$settings['file']) === ''){
+                    throw new \Exception('не удалось определить имя файла: file_in="'.(string)$file
+                        .'", file_raw="'.(string)$fileRaw.'", relative="'.(string)$relative.'", is_full='.($isFullPath?1:0)
+                        .', doc_root="'.(string)$docRoot.'" — конфиг не изменен');
+                }
+
+                //доп. параметры ПЕРЕКРЫВАЮТ базовые: известные ключи settings (log_size и т.д.) —
+                //в log/settings, class_name — в log/class_name, остальные — на верхний уровень $logConfig
+                $allowedExtraSettings = [
+                    'log_size', 'log_error', 'log_file_size', 'date_format', 'trace_format', 'format', 'file'
+                ];
+                $extraApplied = [];
+                $applyToSettings = function($key, $val) use (&$settings, &$extraApplied){
+                    if(is_array($val)){
+                        $appliedVal = array_map('strval', $val);
+                    }elseif(is_scalar($val) || $val === null){
+                        $appliedVal = $val;
+                    }else{
+                        return;
+                    }
+                    $settings[$key] = $appliedVal;
+                    $extraApplied[] = $prefix.$key.'='.(is_array($appliedVal) ? json_encode($appliedVal, JSON_UNESCAPED_UNICODE) : (string)$appliedVal);
+                };
+                foreach($extra as $key=>$val){
+                    //служебные ключи секции не перезаписываем через params (иначе можно уронить конфиг, например 'log' => null)
+                    if($key === 'class_name' || $key === 'settings' || $key === 'log' || $key === 'debug'
+                        || $key === 'name' || $key === 'arguments') continue;
+                    if(in_array($key, $allowedExtraSettings, true)){
+                        $applyToSettings($key, $val);
+                    }elseif(is_scalar($val) || $val === null || is_array($val)){
+                        $logConfig[$key] = $val;
+                        $extraApplied[] = $key.'='.(is_array($val) ? json_encode($val, JSON_UNESCAPED_UNICODE) : (string)$val);
+                    }
+                }
+                //поддержка вложенной формы: params={"settings":{...}} — всё содержимое уходит в log/settings
+                if(isset($extra['settings']) && is_array($extra['settings'])){
+                    foreach($extra['settings'] as $key=>$val){
+                        $applyToSettings($key, $val);
+                    }
+                }
+
+                //класс обработчика лога (class_name секции log) — без проверки существования:
+                //файл может быть еще не подключен (autoload Bitrix подключит при создании обработчика)
+                $className = '';
+                if(isset($extra['class_name']) && is_string($extra['class_name']) && trim($extra['class_name']) !== ''){
+                    $className = trim($extra['class_name']);
+                    if(strpos($className, '\\') !== 0){
+                        $className = '\\'.$className;
+                    }
+                }
+
+                //мусорный верхнеуровневый 'settings' (мог остаться от прошлых версий/кривых params) — убираем,
+                //в exception_handling такого ключа быть не должно
+                if(isset($logConfig['settings'])){
+                    unset($logConfig['settings']);
+                }
+                $logConfig['log']['settings'] = $settings;
+                if($className !== ''){
+                    $logConfig['log']['class_name'] = $className;
+                }elseif(!isset($logConfig['log']['class_name'])){
+                    $logConfig['log']['class_name'] = '\\Bitrix\\Main\\Diag\\FileExceptionHandlerLog';
+                }
+                $logConfig['debug'] = true;
+                $configuration->add('exception_handling', $logConfig);
+                $texts[] = 'Стандартный лог настроен: '.$settings['file']
+                    .' (создастся при первой записи), максимальный размер до ротации: '.$sizeMb.' МБ ('.$sizeBytes.' байт)'
+                    .', log_size: '.$sizeBytes
+                    .', class_name: '.$logConfig['log']['class_name']
+                    .(($extraApplied) ? ', доп. параметры: '.implode(', ', $extraApplied) : '')
+                    .' [diag: file_in="'.(string)$fileRaw.'", file="'.(string)$file.'", relative="'.(string)$relative
+                    .'", is_full='.($isFullPath?1:0).', doc_root="'.(string)$docRoot.'", size_mb_in="'.(string)$size_mb
+                    .'", params_keys='.(is_array($params) ? implode(',', array_keys($params)) : gettype($params)).']'
+                    .'. Читать: log_get с type=exception_handling. Отключить: log_off с type=exception_handling.';
             }else{
                 //PSR-лог: имя логгера = type, регистрируется в секции loggers
+                //каталог должен существовать/создаваться ДО записи конфига:
+                //FileLogger при инициализации с несуществующим каталогом роняет весь сайт (500)
+                $logDir = dirname($logPath);
+                if(!is_dir($logDir)){
+                    if(!@mkdir($logDir, BX_DIR_PERMISSIONS ?? 0755, true) && !is_dir($logDir)){
+                        throw new \Exception('каталог лог-файла не существует и не может быть создан: '.$logDir
+                            .'. Создайте каталог вручную или укажите существующий файл — конфиг не изменен');
+                    }
+                }
+                if(!is_writable($logDir)){
+                    throw new \Exception('каталог лог-файла недоступен для записи: '.$logDir.' — конфиг не изменен');
+                }
                 $loggersConfig = (array)($configuration->get('loggers') ?? []);
-                $loggers = (array)($loggersConfig['value'] ?? []);
+                $loggers = (array)($loggersConfig['value'] ?? $loggersConfig);
                 $loggers[$type] = [
                     'className' => '\\Bitrix\\Main\\Diag\\FileLogger',
-                    'constructorParams' => function() use ($logPath, $sizeBytes){
-                        return [$logPath, $sizeBytes];
-                    },
+                    //constructorParams — массив аргументов конструктора FileLogger [файл, макс. размер].
+                    //Closure нельзя: она не сериализуется в .settings.php (saveConfiguration использует var_export) и роняет сайт
+                    'constructorParams' => [$logPath, $sizeBytes],
                     'level' => constant('\\Psr\\Log\\LogLevel::'.strtoupper($level)),
                 ];
-                $configuration->add('loggers', ['value' => $loggers]);
-                $texts[] = 'PSR-логгер «'.$type.'» зарегистрирован (loggers): \\Bitrix\\Main\\Diag\\FileLogger, файл /'.$relative.'/'.$file.', максимальный размер до ротации: '.$sizeMb.' МБ ('.$sizeBytes.' байт), уровень '.$level.'. Читать: log_get с type='.$type.'.';
+                //структура секции loggers: ['loggers']['value'][<имя>] — add() сам оборачивает в 'value',
+                //поэтому передаем карту логгеров напрямую (['value'=>...] давал двойную вложенность value.value)
+                $configuration->add('loggers', $loggers);
+                $texts[] = 'PSR-логгер «'.$type.'» зарегистрирован (loggers): \\Bitrix\\Main\\Diag\\FileLogger, файл '.$logPath.', максимальный размер до ротации: '.$sizeMb.' МБ ('.$sizeBytes.' байт), уровень '.$level
+                    .' [diag: file_in="'.(string)$fileRaw.'", log_path="'.$logPath.'", doc_root="'.(string)$docRoot.'"]'
+                    .'. Читать: log_get с type='.$type.'. Отключить: log_off с type='.$type.'.';
+            }
+
+            //чужие логгеры с Closure в constructorParams (добавленные другими модулями в рантайме)
+            //приводим к сериализуемому виду ДО var_export
+            $droppedLoggers = $this->sanitizeLoggersForSave();
+            if($droppedLoggers){
+                $texts[] = 'Внимание: из .settings.php удалены логгеры с несериализуемыми constructorParams (Closure): '.implode(', ', $droppedLoggers)
+                    .'. Их конфиг определяется в рантайме и не может быть сохранен в файл.';
             }
 
             $configuration->saveConfiguration();
@@ -410,6 +803,9 @@ class Tools extends App
                 return ['content'=>[['type'=>'text','text'=>$denyReason]], 'isError'=>true];
             }
 
+            if(is_dir($real)){
+                return ['content'=>[['type'=>'text','text'=>'указан каталог, чтение содержимого каталога не поддерживается (только файлы): '.$real]], 'isError'=>true];
+            }
             if(!is_file($real)){
                 return ['content'=>[['type'=>'text','text'=>'файл не найден: '.$real]], 'isError'=>true];
             }
@@ -426,9 +822,17 @@ class Tools extends App
                 if(!$fp){
                     return ['content'=>[['type'=>'text','text'=>'файл не читается: '.$real]], 'isError'=>true];
                 }
-                $content = (string)fread($fp, $maxSize);
+                if($lines === ''){
+                    //без указания строк читаем ХВОСТ (для растущих логов начало неактуально)
+                    fseek($fp, -$maxSize, SEEK_END);
+                    $content = (string)fread($fp, $maxSize);
+                    $truncated = true;
+                }else{
+                    //с указанием строк читаем начало — нумерация строк должна совпадать с файлом
+                    $content = (string)fread($fp, $maxSize);
+                    $truncated = true;
+                }
                 fclose($fp);
-                $truncated = true;
             }else{
                 $content = (string)file_get_contents($real);
             }
@@ -439,16 +843,27 @@ class Tools extends App
 
             $ranges = $this->parseLineRanges($lines);
             if($ranges === null){
-                //весь файл (первая часть, если обрезан)
+                //весь файл: при хвостовом чтении — последние строки без нумерации (номера не совпали бы с файлом)
                 $maxRows = 1000;
-                $show = array_slice($rows, 0, $maxRows);
-                foreach($show as $i=>$line){
-                    $out[] = ($i+1).': '.$line;
-                }
-                if($total > $maxRows){
-                    $out[] = '... (показаны первые '.$maxRows.' строк, всего '.$total.')';
-                }elseif($truncated){
-                    $out[] = '... (файл больше '.ceil($maxSize/1024).' КБ, показано начало)';
+                if($truncated){
+                    //первый фрагмент хвоста может быть обрезанной строкой — отбрасываем его
+                    if(count($rows) > 1 && $rows[0] !== ''){
+                        array_shift($rows);
+                        $total = count($rows);
+                    }
+                    $show = array_slice($rows, -$maxRows);
+                    foreach($show as $line){
+                        $out[] = $line;
+                    }
+                    $out[] = '... (файл больше '.ceil($maxSize/1024).' КБ, показан хвост ~'.strlen($content).' байт, последние '.count($show).' строк; начало файла пропущено — используйте параметр lines для нумерованного чтения с начала)';
+                }else{
+                    $show = array_slice($rows, 0, $maxRows);
+                    foreach($show as $i=>$line){
+                        $out[] = ($i+1).': '.$line;
+                    }
+                    if($total > $maxRows){
+                        $out[] = '... (показаны первые '.$maxRows.' строк, всего '.$total.')';
+                    }
                 }
             }else{
                 //одиночная строка — контекст ±3
@@ -622,7 +1037,9 @@ class Tools extends App
             'dbinfo' => 'Возвращает информацию о базе данных',
             'processinfo' => 'Возвращает информацию о нагрузке системы',
             'log_get' => 'Возвращает содержимое лог-файла Битрикса: type=exception_handling (по умолчанию) — стандартный лог из .settings.php секции log; type=имя PSR-логгера (например awz.bxorm.App) — файл этого логгера из секции loggers. Последние N строк.',
-            'log_set' => 'Настраивает лог-файл Битрикса. type=exception_handling (по умолчанию) — стандартный лог (секция log в .settings.php); type=имя PSR-логгера — PSR-лог (создается/обновляется логгер в секции loggers, class \Bitrix\Main\Diag\FileLogger). Каталог файла выбирается автоматически: константа AWZ_BXORM_LOG_PATH, затем существующий /local/logs/, затем /local/php_interface/, иначе /bitrix/php_interface/.',
+            'log_set' => 'Включает и настраивает лог Битрикса. type=exception_handling (по умолчанию) — системный лог (секция log в exception_handling .settings.php, по умолчанию класс \Bitrix\Main\Diag\FileExceptionHandlerLog); type=имя PSR-логгера — PSR-лог (создается/обновляется логгер в секции loggers, class \Bitrix\Main\Diag\FileLogger). params — доп. параметры системного лога (JSON или массив): class_name (произвольный класс обработчика, без проверки существования) — в log/class_name; ключи settings (log_size, log_error, log_file_size, date_format, trace_format, format, file) — в log/settings; любые другие ключи — на верхний уровень exception_handling. Каталог файла выбирается автоматически: константа AWZ_BXORM_LOG_PATH, затем существующий /local/logs/, затем /local/php_interface/, иначе /bitrix/php_interface/. В file также можно указать полный путь (например /var/www/site/bitrix/php_interface/exceptions.log) — тогда он используется как есть и записывается в settings.file полностью. Отключение — инструмент log_off.',
+            'log_off' => 'Полностью отключает системное логирование и debug. type=exception_handling (по умолчанию) — в .settings.php ставится exception_handling.debug=false и удаляется секция log; type=имя PSR-логгера — логгер удаляется из секции loggers.',
+            'log_clear' => 'Усекает (ротирует) лог-файл: содержимое обнуляется, настройки логирования сохраняются и продолжают работать. Файл берется из настроек (type=exception_handling — секция log .settings.php; type=имя PSR-логгера — файл логгера) или задается явно параметром file (те же ограничения, что у file_get).',
             'file_get' => 'Возвращает содержимое файла (путь абсолютный или от корня сайта) — целиком или выбранные строки. Используй, чтобы прочитать файл, на который указала ошибка в логе.'
         ];
 
@@ -644,7 +1061,7 @@ class Tools extends App
                 'properties' => [
                     'file' => new DTO\Tool\PropertySchema(
                         type: 'string',
-                        description: 'Имя лог-файла (например mcp.log). Каталог выбирается автоматически: константа AWZ_BXORM_LOG_PATH, затем существующий /local/logs/, затем /local/php_interface/, иначе /bitrix/php_interface/. Обязательно.'
+                        description: 'Имя лог-файла (например mcp.log) либо полный путь (например /var/www/site/bitrix/php_interface/exceptions.log — используется как есть). Для имени каталог выбирается автоматически: константа AWZ_BXORM_LOG_PATH, затем существующий /local/logs/, затем /local/php_interface/, иначе /bitrix/php_interface/. Обязательно.'
                     ),
                     'size_mb' => new DTO\Tool\PropertySchema(
                         type: 'string',
@@ -658,8 +1075,34 @@ class Tools extends App
                         type: 'string',
                         description: 'Тип лога, как в log_get: exception_handling (по умолчанию) — стандартный лог (секция log в .settings.php); либо имя PSR-логгера (например awz.allxls) — PSR-лог, создается/обновляется логгер с этим именем в секции loggers'
                     ),
+                    'params' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Доп. параметры системного лога — JSON-строка или объект (только для type=exception_handling). Допустимы: class_name — произвольный класс обработчика лога (без проверки существования, по умолчанию \Bitrix\Main\Diag\FileExceptionHandlerLog) — попадает в log/class_name; ключи settings: log_size, log_error, log_file_size, date_format, trace_format, format, file — попадают в log/settings; любые другие ключи — на верхний уровень exception_handling. Пример: {"log_size":1000000}'
+                    ),
                 ],
                 'required' => ['file']
+            ],
+            'log_off' => [
+                'properties' => [
+                    'type' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Тип лога, как в log_get: exception_handling (по умолчанию) — в .settings.php ставится debug=false и удаляется секция log; либо имя PSR-логгера — логгер удаляется из секции loggers'
+                    ),
+                ],
+                'required' => []
+            ],
+            'log_clear' => [
+                'properties' => [
+                    'type' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Тип лога, как в log_get: exception_handling (по умолчанию) — усекается файл из секции log .settings.php; либо имя PSR-логгера — усекается его файл'
+                    ),
+                    'file' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Необязательный явный путь к файлу (абсолютный или от корня сайта) — усекается он; при пустом значении берется файл из настроек по type'
+                    ),
+                ],
+                'required' => []
             ],
             'file_get' => [
                 'properties' => [
