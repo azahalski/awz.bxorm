@@ -442,7 +442,8 @@ class App extends Controller
     public function update(string $entityClass, array $fieldsParams, array $primary, array $fields = []){
         $activeFields = [];
         foreach($fieldsParams as $fieldKey=>$fieldValue){
-            if($fieldValue['isActive'] === 'Y' && $fieldValue['isReadOnly'] !== 'Y'){
+            $isReadonly = $fieldValue['isReadonly'] ?? ($fieldValue['isReadOnly'] ?? '');
+            if($fieldValue['isActive'] === 'Y' && $isReadonly !== 'Y'){
                 if(mb_strpos($fieldKey, '.')!==false) continue;
                 $activeFields[] = $fieldKey;
             }
@@ -591,10 +592,11 @@ class App extends Controller
             }
             $noLink = true;
         }
+        $isReadonly = $fieldsParams[$fieldCode]['isReadonly'] ?? ($fieldsParams[$fieldCode]['isReadOnly'] ?? '');
         $fieldsData[$fieldCode] = [
             'type'=>$fieldsParams[$fieldCode]['type'],
             'isRequired'=>$fieldsParams[$fieldCode]['isRequired'] == 'Y' ? 1 : 0,
-            'isReadOnly'=>$fieldsParams[$fieldCode]['isReadonly'] == 'Y' ? 1 : 0,
+            'isReadOnly'=>$isReadonly == 'Y' ? 1 : 0,
             'sort'=>$fieldsParams[$fieldCode]['isSortable'] == 'Y' ? $fieldCode : '',
             'title'=>$fieldsParams[$fieldCode]['title'],
             'noLink'=>1
