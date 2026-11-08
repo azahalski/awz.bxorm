@@ -26,6 +26,8 @@ use Bitrix\Main\Type\ParameterDictionary;
 use Bitrix\Main\Application;
 use Bitrix\Main\Config\Option;
 use Bitrix\Main\ModuleManager;
+use Bitrix\Main\IO\Directory;
+use Bitrix\Main\IO\File;
 
 use awz\bxorm\api\controller\mcp\DTO;
 
@@ -1026,6 +1028,189 @@ class Tools extends App
         return ['content'=>$content];
     }
 
+    /**
+     * Допустимые расширения изображений (base64-загрузка)
+     */
+    const PHOTO_ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif'];
+
+    /**
+     * MCP-инструмент iblocks: список инфоблоков сайта (для выбора IBLOCK_ID).
+     * name — подстрока поиска по названию, type — IBLOCK_TYPE_ID,
+     * active_only — Y (по умолчанию) / N.
+     */
+    public function iblocksAction(string $name = '', string $type = '', string $activeOnly = 'Y')
+    {
+        try{
+            $name = trim((string)$name);
+            $type = trim((string)$type);
+
+            if(!Loader::includeModule('iblock')){
+                return ['content'=>[['type'=>'text','text'=>'Модуль iblock не установлен']], 'isError'=>true];
+            }
+
+            $arParams = ['CHECK_PERMISSIONS' => 'N'];
+            if($activeOnly !== 'N'){
+                $arParams['ACTIVE'] = 'Y';
+            }
+            if($type !== ''){
+                $arParams['IBLOCK_TYPE_ID'] = $type;
+            }
+            if($name !== ''){
+                $arParams['?NAME'] = $name;
+            }
+
+            $items = [];
+            $res = \CIBlock::GetList(
+                ['SORT' => 'ASC', 'NAME' => 'ASC'],
+                $arParams,
+                true
+            );
+            while($row = $res->Fetch()){
+                $items[] = [
+                    'ID' => (int)$row['ID'],
+                    'NAME' => (string)$row['NAME'],
+                    'CODE' => (string)($row['CODE'] ?? ''),
+                    'IBLOCK_TYPE_ID' => (string)$row['IBLOCK_TYPE_ID'],
+                    'ACTIVE' => (string)$row['ACTIVE'],
+                    'LID' => (string)($row['LID'] ?? ''),
+                    'ELEMENTS_CNT' => (int)($row['ELEMENT_CNT'] ?? 0),
+                ];
+            }
+
+            if(empty($items)){
+                return ['content'=>[['type'=>'text','text'=>'Инфоблоки не найдены (фильтр: name="'.$name.'", type="'.$type.'")']]];
+            }
+
+            $out = ['Найдено инфоблоков: '.count($items)];
+            foreach($items as $item){
+                $out[] = '[#'.$item['ID'].'] '.$item['NAME']
+                    .' | код: '.($item['CODE'] !== '' ? $item['CODE'] : '—')
+                    .' | тип: '.$item['IBLOCK_TYPE_ID']
+                    .' | активен: '.$item['ACTIVE']
+                    .' | сайт: '.($item['LID'] !== '' ? $item['LID'] : '—')
+                    .' | элементов: '.$item['ELEMENTS_CNT'];
+            }
+
+            return ['content'=>[['type'=>'text','text'=>implode("\n", $out)]]];
+        }catch(\Throwable $e){
+            return ['content'=>[['type'=>'text','text'=>'tool iblocks error: '.$e->getMessage()]], 'isError'=>true];
+        }
+    }
+
+    /**
+     * MCP-инструмент loadphoto: сохраняет постоянное изображение из base64
+     * в /upload/awz.load.ai/ и возвращает публичный URL.
+     * Форматы: png, jpg, jpeg, webp, svg, gif.
+     */
+    public function loadphotoAction(string $photo = '')
+    {
+        try{
+            $saved = $this->saveBase64Image((string)$photo, '/upload/awz.load.ai/', false);
+            if($saved === null){
+                return ['content'=>[['type'=>'text','text'=>'Некорректное изображение или формат не поддерживается. Допустимо: '.implode(', ', self::PHOTO_ALLOWED_EXTENSIONS)]], 'isError'=>true];
+            }
+            return ['content'=>[['type'=>'text','text'=>'Изображение сохранено: '.$saved]]];
+        }catch(\Throwable $e){
+            return ['content'=>[['type'=>'text','text'=>'tool loadphoto error: '.$e->getMessage()]], 'isError'=>true];
+        }
+    }
+
+    /**
+     * MCP-инструмент tmpphoto: сохраняет временное изображение из base64
+     * в /upload/awz.gen.tmp/ (файлы старше 1 часа удаляются) и возвращает публичный URL.
+     * Форматы: png, jpg, jpeg, webp, svg, gif.
+     */
+    public function tmpphotoAction(string $photo = '')
+    {
+        try{
+            $relativeDir = '/upload/awz.gen.tmp/';
+            $tmpDir = Application::getDocumentRoot().$relativeDir;
+            if(is_dir($tmpDir)){
+                foreach(glob($tmpDir.'*') as $oldFile){
+                    if(is_file($oldFile) && filemtime($oldFile) < (time() - 3600)){
+                        @unlink($oldFile);
+                    }
+                }
+            }
+
+            $saved = $this->saveBase64Image((string)$photo, $relativeDir, true);
+            if($saved === null){
+                return ['content'=>[['type'=>'text','text'=>'Некорректное изображение или формат не поддерживается. Допустимо: '.implode(', ', self::PHOTO_ALLOWED_EXTENSIONS)]], 'isError'=>true];
+            }
+            return ['content'=>[['type'=>'text','text'=>'Временное изображение сохранено: '.$saved]]];
+        }catch(\Throwable $e){
+            return ['content'=>[['type'=>'text','text'=>'tool tmpphoto error: '.$e->getMessage()]], 'isError'=>true];
+        }
+    }
+
+    /**
+     * Декодирует base64 (с отсечением префикса data:image/...;base64,), определяет
+     * формат по сигнатуре и сохраняет файл в указанную директорию.
+     * Возвращает публичный URL или null при ошибке.
+     */
+    private function saveBase64Image(string $photo, string $relativeDir, bool $createDir = false): ?string
+    {
+        if(strpos($photo, ',') !== false){
+            @list(, $photo) = explode(',', $photo, 2);
+        }
+        $photo = trim((string)$photo);
+        if($photo === ''){
+            return null;
+        }
+        $decodedData = base64_decode($photo, true);
+        if($decodedData === false || $decodedData === ''){
+            return null;
+        }
+
+        $ext = $this->detectImageExt($decodedData);
+        if($ext === '' || !in_array($ext, self::PHOTO_ALLOWED_EXTENSIONS, true)){
+            return null;
+        }
+
+        $absDir = Application::getDocumentRoot().$relativeDir;
+        if($createDir && !Directory::isDirectoryExists($absDir)){
+            Directory::createDirectory($absDir);
+        }
+        if(!is_dir($absDir)){
+            return null;
+        }
+
+        $fileName = \Bitrix\Main\Security\Random::getString(10).'.'.$ext;
+        $file = new File($absDir.$fileName);
+        $file->putContents($decodedData);
+
+        return 'https://'.Application::getInstance()->getContext()->getRequest()->getHttpHost()
+            .$relativeDir.$fileName;
+    }
+
+    /**
+     * Определяет расширение изображения по сигнатуре (магическим байтам).
+     * jpeg нормализуется в jpg, svg — по наличию тега <svg в начале файла.
+     */
+    private function detectImageExt(string $data): string
+    {
+        $head = substr($data, 0, 16);
+        if(strncmp($head, "\x89PNG\r\n\x1a\n", 8) === 0){
+            return 'png';
+        }
+        if(strncmp($head, "\xFF\xD8\xFF", 3) === 0){
+            return 'jpg';
+        }
+        if(strncmp($head, 'GIF87a', 6) === 0 || strncmp($head, 'GIF89a', 6) === 0){
+            return 'gif';
+        }
+        if(strncmp($head, 'RIFF', 4) === 0 && substr($data, 8, 4) === 'WEBP'){
+            return 'webp';
+        }
+        $trim = ltrim($data, "\xEF\xBB\xBF \t\r\n");
+        if(str_starts_with($trim, '<?xml') || str_starts_with($trim, '<svg')){
+            if(stripos(substr($trim, 0, 1024), '<svg') !== false){
+                return 'svg';
+            }
+        }
+        return '';
+    }
+
     public function listAction(int $app, $json = []){
 
         $mcpData = \Awz\BxOrm\HooksTable::getRowById($this->getRequest()->get('app'));
@@ -1040,7 +1225,10 @@ class Tools extends App
             'log_set' => 'Включает и настраивает лог Битрикса. type=exception_handling (по умолчанию) — системный лог (секция log в exception_handling .settings.php, по умолчанию класс \Bitrix\Main\Diag\FileExceptionHandlerLog); type=имя PSR-логгера — PSR-лог (создается/обновляется логгер в секции loggers, class \Bitrix\Main\Diag\FileLogger). params — доп. параметры системного лога (JSON или массив): class_name (произвольный класс обработчика, без проверки существования) — в log/class_name; ключи settings (log_size, log_error, log_file_size, date_format, trace_format, format, file) — в log/settings; любые другие ключи — на верхний уровень exception_handling. Каталог файла выбирается автоматически: константа AWZ_BXORM_LOG_PATH, затем существующий /local/logs/, затем /local/php_interface/, иначе /bitrix/php_interface/. В file также можно указать полный путь (например /var/www/site/bitrix/php_interface/exceptions.log) — тогда он используется как есть и записывается в settings.file полностью. Отключение — инструмент log_off.',
             'log_off' => 'Полностью отключает системное логирование и debug. type=exception_handling (по умолчанию) — в .settings.php ставится exception_handling.debug=false и удаляется секция log; type=имя PSR-логгера — логгер удаляется из секции loggers.',
             'log_clear' => 'Усекает (ротирует) лог-файл: содержимое обнуляется, настройки логирования сохраняются и продолжают работать. Файл берется из настроек (type=exception_handling — секция log .settings.php; type=имя PSR-логгера — файл логгера) или задается явно параметром file (те же ограничения, что у file_get).',
-            'file_get' => 'Возвращает содержимое файла (путь абсолютный или от корня сайта) — целиком или выбранные строки. Используй, чтобы прочитать файл, на который указала ошибка в логе.'
+            'file_get' => 'Возвращает содержимое файла (путь абсолютный или от корня сайта) — целиком или выбранные строки. Используй, чтобы прочитать файл, на который указала ошибка в логе.',
+            'iblocks' => 'Возвращает список инфоблоков сайта (ID, название, код, тип, активность, количество элементов). Используй для выбора IBLOCK_ID перед работой с инфоблоками. Параметры: name — подстрока поиска по названию, type — фильтр по типу инфоблока (IBLOCK_TYPE_ID), active_only — Y (по умолчанию, только активные) / N.',
+            'loadphoto' => 'Сохраняет постоянное изображение из base64 в /upload/awz.load.ai/ и возвращает публичный URL. Используй для картинок, вставляемых в HTML внутри материалов. Поддерживаемые форматы: png, jpg, jpeg, webp, svg, gif. Параметр photo — base64-строка (допустим префикс data:image/...;base64,).',
+            'tmpphoto' => 'Сохраняет временное изображение из base64 в /upload/awz.gen.tmp/ и возвращает публичный URL. Используй для загрузки в фото превью/детальное (файлы старше 1 часа удаляются автоматически). Поддерживаемые форматы: png, jpg, jpeg, webp, svg, gif. Параметр photo — base64-строка (допустим префикс data:image/...;base64,).'
         ];
 
         $schemas = [
@@ -1116,6 +1304,41 @@ class Tools extends App
                     ),
                 ],
                 'required' => ['file']
+            ],
+            'iblocks' => [
+                'properties' => [
+                    'name' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Подстрока для поиска по названию инфоблока'
+                    ),
+                    'type' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Фильтр по типу инфоблока (IBLOCK_TYPE_ID)'
+                    ),
+                    'active_only' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Y (по умолчанию) — только активные инфоблоки; N — все'
+                    ),
+                ],
+                'required' => []
+            ],
+            'loadphoto' => [
+                'properties' => [
+                    'photo' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Изображение в base64 (допустим префикс data:image/...;base64,). Форматы: png, jpg, jpeg, webp, svg, gif. Обязательно.'
+                    ),
+                ],
+                'required' => ['photo']
+            ],
+            'tmpphoto' => [
+                'properties' => [
+                    'photo' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Изображение в base64 (допустим префикс data:image/...;base64,). Форматы: png, jpg, jpeg, webp, svg, gif. Обязательно.'
+                    ),
+                ],
+                'required' => ['photo']
             ]
         ];
 

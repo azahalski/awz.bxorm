@@ -1,6 +1,9 @@
 <!-- cl-start -->
 ## История версий
 
+**version 1.1.4**    
+- добавлены MCP-инструменты: iblocks (список инфоблоков), loadphoto и tmpphoto (загрузка изображений png, jpg, jpeg, webp, svg, gif из base64).
+
 **version 1.1.3**    
 - исправлена проверка обновления readonly полей.    
 
