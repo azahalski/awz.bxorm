@@ -1,0 +1,1 @@
+- добавлены MCP-инструменты: iblocks (список инфоблоков), loadphoto и tmpphoto (загрузка изображений png, jpg, jpeg, webp, svg, gif из base64).
