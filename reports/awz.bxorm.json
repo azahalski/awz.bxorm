@@ -1,0 +1,128 @@
+{
+  "success": true,
+  "requestId": "awz.bxorm-1794755519",
+  "data": {
+    "vulnerabilities": [
+      {
+        "file": "lib/api/filters/appauth.php",
+        "line": "95-101",
+        "type": "Authentication Bypass",
+        "severity": "medium",
+        "description": "Подтверждена имперсонализация пользователей: AppAuth-фильтр принимает ключ формата 'userId|TOKEN' и после успешной проверки токена вызывает $USER->Authorize($userAr[0]) с идентификатором пользователя из запроса (строки 95-101). Обладатель одного валидного токена хука может действовать от имени любого пользователя, включая администратора. Атакующий с токеном одного метода формирует ключ '227|aBcDeFgHiJkLmNoPqRsTuVwXyZ' и проходит авторизацию как пользователь ID=227.",
+        "recommendation": "Не использовать $USER->Authorize на внешнем API-слое без привязки userId к подписи токена. Если имперсонализация необходима — привязать userId к HMAC-подписи токена и ограничить список имперсонируемых пользователей настройкой модуля.",
+        "fix": "Before:\nif(strpos($key, '|')!==false){\n    $userAr = explode('|',$key);\n    if(count($userAr)==2){\n        global $USER;\n        $USER->Authorize($userAr[0]);\n    }\n}\n\nAfter:\nif(strpos($key, '|')!==false){\n    $userAr = explode('|',$key);\n    if(count($userAr)==2){\n        $userId = (int)$userAr[0];\n        $allowed = \\Bitrix\\Main\\Config\\Option::get('awz.bxorm', 'impersonation_users_'.$appId, '');\n        if($userId > 0 && in_array($userId, array_map('intval', explode(',', $allowed)), true)){\n            global $USER;\n            $USER->Authorize($userId);\n        }\n    }\n}"
+      },
+      {
+        "file": "lib/adminpages/hooksedit.php",
+        "line": "38",
+        "type": "Cross-Site Scripting",
+        "severity": "medium",
+        "description": "Подтверждено: HooksEdit::getFieldValue() при незаполненной форме ($this->saved === false) возвращает значение $_REQUEST[$name] без экранирования (строка 38). Значение попадает в value-атрибуты и SELECT-опции админ-формы handler_el (awz.admin). Reflected XSS в админ-панели: пользователь открывает URL /bitrix/admin/awz_bxorm_hooks_edit.php?NAME=<script>alert(1)</script> и выполняет вредоносный JavaScript от имени администратора в контексте сайта.",
+        "recommendation": "Экранировать значения из $_REQUEST аналогично MethodsEdit::getFieldValue, который использует htmlspecialcharsEx (строка 48 methodsedit.php). Применить htmlspecialcharsbx перед возвратом скалярного значения.",
+        "fix": "Before:\nif(!$this->saved) {\n    $value = (isset($_REQUEST[$name]) && array_key_exists($name, $_REQUEST)) ? $_REQUEST[$name] : $defValue;\n}\n\nAfter:\nif(!$this->saved) {\n    $value = (isset($_REQUEST[$name]) && array_key_exists($name, $_REQUEST)) ? $_REQUEST[$name] : $defValue;\n    if(is_scalar($value)){\n        $value = htmlspecialcharsbx((string)$value);\n    }\n}"
+      },
+      {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "640-646",
+        "type": "Information Disclosure",
+        "severity": "medium",
+        "description": "Подтверждено: log_set позволяет установить произвольное имя класса обработчика логов в секции log/class_name .settings.php через params.class_name или аргумент class_name (строки 640-646). Класс записывается в конфигурационный файл без проверки существования, наследования от \\Bitrix\\Main\\Diag\\FileExceptionHandlerLog или валидации. При перезагрузке Bitrix может попытаться инстанциировать указанный класс, что приведёт к unexpected behavior или загрузке стороннего кода. Атакующий с токеном MCP вызывает tools/log_set c class_name='AnyClass' для записи в .settings.php.",
+        "recommendation": "Валидировать class_name: проверять существование класса через class_exists() и соответствие иерархии через is_subclass_of($candidate, \\Bitrix\\Main\\Diag\\FileExceptionHandlerLog). Отклонять классы, не являющиеся доверенными обработчиками логов.",
+        "fix": "Before:\n$className = '';\nif(isset($extra['class_name']) && is_string($extra['class_name']) && trim($extra['class_name'])!==''){\n    $className = trim($extra['class_name']);\n    if(strpos($className, '\\\\') !== 0){\n        $className = '\\\\'.$className;\n    }\n}\n\nAfter:\n$className = '';\nif(isset($extra['class_name']) && is_string($extra['class_name']) && trim($extra['class_name'])!==''){\n    $candidate = trim($extra['class_name']);\n    if(strpos($candidate, '\\\\') !== 0){\n        $candidate = '\\\\'.$candidate;\n    }\n    if(class_exists($candidate) && is_subclass_of($candidate, '\\\\Bitrix\\\\Main\\\\Diag\\\\FileExceptionHandlerLog')){\n        $className = $candidate;\n    }else{\n        throw new \\Exception('недопустимый class_name');\n    }\n}"
+      },
+      {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1108",
+        "type": "Information Disclosure",
+        "severity": "medium",
+        "description": "Подтверждено: iblocksAction использует CIBlock::GetList с CHECK_PERMISSIONS='N' (строка 1108), что раскрывает полный список инфоблоков (ID, NAME, CODE, IBLOCK_TYPE_ID, ELEMENTS_CNT) любому аутентифицированному пользователю по токену MCP, включая внутренние/непубликуемые инфоблоки. Это нарушает модель разграничения прав Битрикс и позволяет атакующему составить карту контента сайта.",
+        "recommendation": "Заменить CHECK_PERMISSIONS='N' на проверку прав через CIBlock::CheckAccess() для каждого найденного инфоблока, либо ограничить результат белым списком разрешённых IBLOCK_ID, настроенных в методе.",
+        "fix": "Before:\n$arParams = ['CHECK_PERMISSIONS' => 'N'];\nif($activeOnly !== 'N'){\n    $arParams['ACTIVE'] = 'Y';\n}\n$res = \\CIBlock::GetList(['SORT'=>'ASC','NAME'=>'ASC'], $arParams, true);\n\nAfter:\n$arParams = [];\nif($activeOnly !== 'N'){\n    $arParams['ACTIVE'] = 'Y';\n}\n$res = \\CIBlock::GetList(['SORT'=>'ASC','NAME'=>'ASC'], $arParams, true);\n$whitelistIds = [];\n$methodData = MethodsTable::getRowById($scope->getMethodId());\nif($methodData && !empty($methodData['PARAMS']['iblocks'])){ $whitelistIds = $methodData['PARAMS']['iblocks']; }\nwhile($row = $res->Fetch()){\n    if(!empty($whitelistIds) && !in_array($row['ID'], $whitelistIds, true)) continue;\n    if(!CIBlock::CheckAccess($USER->GetID(), $row['ID'])) continue;\n    ...\n}"
+      },
+      {
+        "file": "lib/api/controller/app.php",
+        "line": "56-65",
+        "type": "CSRF",
+        "severity": "medium",
+        "description": "Подтверждено: batchAction не включает CSRF-фильтр в configureActions (отсутствует ActionFilter\\Csrf для action 'batch'). Действие state-changing (batch-create/update/delete) выполняется только через POST (требуется AppAuth), но без защиты CSRF. В контексте token-based API (AppAuth) CSRF-атака затруднена: атакующему нужен токен авторизации. Однако если токен утечёт (см. finding token_in_url, helper.php:179), атакующий сможет выполнить batch-операции от имени владельца токена.",
+        "recommendation": "Добавить ActionFilter\\Csrf в prefilters для action 'batch' или реализовать custom CSRF-защиту на уровне токена (verify bitrix_sessid + module-specific token binding).",
+        "fix": "Before:\n'batch' => [\n    'prefilters' => [\n        new NoCors([],[]),\n        new AppAuth(...)\n    ]\n]\n\nAfter:\n'batch' => [\n    'prefilters' => [\n        new NoCors([],[]),\n        new AppAuth(...),\n        new \\Bitrix\\Main\\Engine\\ActionFilter\\Csrf()\n    ]\n]"
+      },
+      {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1091",
+        "type": "Cross-Site Scripting",
+        "severity": "low",
+        "description": "Подтверждено: loadphotoAction и tmpphotoAction сохраняют SVG-изображения с расширением .svg (PHOTO_ALLOWED_EXTENSIONS содержит 'svg', строка 1091; detectImageExt определяет SVG по наличию тега '<svg>', строки 1320-1323) и возвращают публичный HTTPS-URL (строки 1296-1297). Браузер автоматически рендерит SVG как изображение, выполняя embedded <script>, <animate>, <iframe>. Любой аутентифицированный пользователь может сохранить вредоносный SVG для выполнения stored XSS при открытии URL другими пользователями. Размер decoded данных ограничен 5MB (добавлен контроль на строке 1275), но это не устраняет XSS-риск.",
+        "recommendation": "Отключить SVG из PHOTO_ALLOWED_EXTENSIONS, либо sanitize SVG перед сохранением (удалить все теги кроме визуальных, stripping script/animate/iframe). Альтернативно — сохранять как .png через конвертацию GD/ImageMagick.",
+        "fix": "Before:\nconst PHOTO_ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif'];\n\nAfter:\nconst PHOTO_ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif']; // svg удалён: stored XSS через embedded JS"
+      },
+      {
+        "file": "lib/helper.php",
+        "line": "179",
+        "type": "Information Disclosure",
+        "severity": "low",
+        "description": "Подтверждено: getMcpUrl() формирует URL подключения MCP-клиента с токеном в GET-параметре (строка 179: $url .= '&key='.$token). Токен попадает в access-логи веб-сервера, историю браузера, рефереры прокси-серверов. Любой владелец токена получает полный доступ к API без дополнительного шлюза.",
+        "recommendation": "Передавать токен через заголовок Authorization (поддерживается AppAuth, строки 56-71 appauth.php). Для отображаемого URL выдавать токен отдельно и не включать его в публично копируемую ссылку.",
+        "fix": "Before:\nif($token){\n    $url .= '&key='.$token;\n}\nreturn $url;\n\nAfter:\n// токен не включается в URL; клиент передаёт его в заголовке Authorization: Token <token>\n// AppAuth::onBeforeAction (appauth.php:56-71) извлекает токен из заголовка Authorization\nreturn $url;"
+      },
+      {
+        "file": "lib/api/filters/nocors.php",
+        "line": "34-40",
+        "type": "Information Disclosure",
+        "severity": "low",
+        "description": "Подтверждено: NoCors-фильтр отражает в Access-Control-Allow-Origin любой Origin из HTTP-запроса (строка 37) или устанавливает '*' (строка 39), без allowlist доверенных источников. Позволяет сторонним сайтам выполнять кросс-доменные запросы к API модуля. Так как авторизация зависит от токена (не cookies), прямой CSRF невозможен, но при наличии токена в браузерном JavaScript-клиенте Origin-flexibility расширяет поверхность атаки — злоумышленник может организовать фишинговый сайт для кражи данных через CORS.",
+        "recommendation": "Валидировать Origin по опции-allowlist mcp_cors_origins; при отсутствии совпадения не устанавливать Access-Control-Allow-Origin.",
+        "fix": "Before:\n$origin = $this->origin ?: \\Bitrix\\Main\\Context::getCurrent()->getRequest()->getHeader('Origin');\nif ($origin){\n    $response->addHeader('Access-Control-Allow-Origin', $origin);\n}else{\n    $response->addHeader('Access-Control-Allow-Origin', \"*\");\n}\n\nAfter:\n$origin = $this->origin ?: \\Bitrix\\Main\\Context::getCurrent()->getRequest()->getHeader('Origin');\n$allowed = array_filter(array_map('trim', explode(',', (string)\\Bitrix\\Main\\Config\\Option::get('awz.bxorm', 'mcp_cors_origins', ''))));\nif($origin && in_array((string)$origin, $allowed, true)){\n    $response->addHeader('Access-Control-Allow-Origin', (string)$origin);\n}\n// без совпадения в allowlist — CORS-заголовок не устанавливается"
+      },
+      {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "769-772",
+        "type": "Information Disclosure",
+        "severity": "low",
+        "description": "Подтверждено: checkFileReadAllowed использует дефолтный whitelist mcp_file_whitelist со значением '/bitrix/php_interface/,/bitrix/modules/,/local/,/upload/' (строки 769-772). Каталог /bitrix/modules/ позволяет прочитать исходный код любого установленного модуля Битрикс — включая стандартные компоненты, платные модули и системную логику. Владелец токена MCP может получить полный исходный код других модулей, включая конфиденциальную бизнес-логику, ключи интеграций и паттерны доступа к БД.",
+        "recommendation": "Сузить дефолтный whitelist до минимально необходимых каталогов (например только '/upload/,/local/logs/'). Требовать явной настройки модуля для доступа к /bitrix/modules/.",
+        "fix": "Before:\n$whitelist = array_filter(array_map('trim', explode(',',\n    (string)\\Bitrix\\Main\\Config\\Option::get('awz.bxorm', 'mcp_file_whitelist',\n        '/bitrix/php_interface/,/bitrix/modules/,/local/,/upload/')\n    )));\n\nAfter:\n$whitelist = array_filter(array_map('trim', explode(',',\n    (string)\\Bitrix\\Main\\Config\\Option::get('awz.bxorm', 'mcp_file_whitelist',\n        '/upload/,/local/logs/')\n    )));\n// /bitrix/modules/ и /bitrix/php_interface/ требуют явного разрешения в настройке"
+      },
+      {
+        "file": "lib/hooks.php",
+        "line": "76",
+        "type": "Insecure Deserialization",
+        "severity": "low",
+        "description": "Подтверждено: HooksTable::getMap() использует serialize/unserialize для поля METHODS с allowed_classes=false (строка 76). Данные хранятся в битриксовой таблице b_awz_bxorm_methods и контролируются администраторами модуля. allowed_classes=false mitigates RCE risk, но остаётся возможность денормализации данных или атаки на бизнес-логику при манипуляции сериализованным содержимым через админ-панель. Defense-in-depth recommendation: рассмотреть миграцию на JSON-кодирование через json_encode/json_decode.",
+        "recommendation": "Рассмотреть миграцию с serialize/unserialize на json_encode/json_decode для безопасного хранения массивов данных в БД.",
+        "fix": "Before:\n'fetch_data_modification' => function(){\n    return [\n        function ($value) {\n            return unserialize($value, [\"allowed_classes\" => false]);\n        }\n    ];\n},\n\nAfter:\n'fetch_data_modification' => function(){\n    return [\n        function ($value) {\n            $decoded = json_decode($value, true);\n            return is_array($decoded) ? $decoded : [];\n        }\n    ];\n},"
+      },
+      {
+        "file": "lib/methods.php",
+        "line": "101",
+        "type": "Insecure Deserialization",
+        "severity": "low",
+        "description": "Подтверждено: MethodsTable::getMap() использует serialize/unserialize для поля PARAMS с allowed_classes=false (строка 101). Аналогично hooks.php: защита от RCE через allowed_classes=false, но рекомендуется миграция на JSON для defense-in-depth.",
+        "recommendation": "Рассмотреть миграцию с serialize/unserialize на json_encode/json_decode для безопасного хранения массивов данных в БД.",
+        "fix": "Before:\n'fetch_data_modification' => function(){\n    return [\n        function ($value) {\n            return unserialize($value, [\"allowed_classes\" => false]);\n        }\n    ];\n},\n\nAfter:\n'fetch_data_modification' => function(){\n    return [\n        function ($value) {\n            $decoded = json_decode($value, true);\n            return is_array($decoded) ? $decoded : [];\n        }\n    ];\n},"
+      }
+    ],
+    "summary": "Аудит модуля awz.bxorm выполнен по методологии recon+audit. Сканировано 78 файлов детально исследовано 10 ключевых entry-point файлов. Свёртка с прошлым сканом (reviewed.json): подтверждены 9 из 12 прежних находок, 3 исключены — исправлено в текущем коде: 1) add() mass assignment — добавлена in_array/$activeFields валидация (app.php:418-429); 2) saveBase64Image DoS — добавлен 5MB лимит (tools.php:1275-1277); 3) shell_exec — hardcoded benign команды top/free/nproc без переменных пользователя (tools.php:971-973). Добавлено 1 новая находка (Insecure Deserialization в lib/hooks.php:76 и lib/methods.php:101 — defense-in-depth). Итого: 11 уязвимостей. Распределение по severity: high=0, medium=6 (Authentication Bypass impersonation, Reflected XSS admin panel, class_name config leak, iblocks info leak, batch CSRF), low=5 (Stored XSS SVG, token_in_url, CORS reflection, wide file whitelist, 2x Insecure Deserialization serialized fields). riskLevel = medium.",
+    "scannedFiles": 78,
+    "riskLevel": "medium",
+    "auditedFiles": [
+      "lib/api/controller/app.php",
+      "lib/api/controller/bxmcp.php",
+      "lib/api/controller/-hook.php",
+      "lib/api/controller/mcp/app.php",
+      "lib/api/controller/mcp/prompts.php",
+      "lib/api/controller/mcp/resources.php",
+      "lib/api/controller/mcp/tools.php",
+      "lib/api/filters/appauth.php",
+      "lib/api/filters/sign.php",
+      "lib/api/filters/nocors.php",
+      "lib/adminpages/hooksedit.php",
+      "lib/adminpages/methodsedit.php",
+      "lib/helper.php",
+      "lib/api/scopes/controller.php",
+      "lib/hooks.php",
+      "lib/methods.php"
+    ]
+  }
+}

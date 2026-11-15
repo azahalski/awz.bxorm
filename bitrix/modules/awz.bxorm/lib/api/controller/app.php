@@ -533,7 +533,13 @@ class App extends Controller
             }
         }
         if(isset($params['filter']) && is_array($params['filter'])){
-            $query['filter'] = $params['filter'];
+            $query['filter'] = [];
+            foreach($params['filter'] as $fk=>$fv){
+                $fKey = ltrim((string)$fk, '=<>!%@*');
+                if(in_array($fKey, $activeFields)){
+                    $query['filter'][$fk] = $fv;
+                }
+            }
         }
 
         if(!isset($params['limit'])){

@@ -1272,6 +1272,9 @@ class Tools extends App
         if($decodedData === false || $decodedData === ''){
             return null;
         }
+        if(strlen($decodedData) > 5*1024*1024){
+            return null;
+        }
 
         $ext = $this->detectImageExt($decodedData);
         if($ext === '' || !in_array($ext, self::PHOTO_ALLOWED_EXTENSIONS, true)){
