@@ -1,6 +1,6 @@
 {
-  "requestId": "awz.bxorm-1793180950",
   "success": true,
+  "requestId": "awz-bxorm-114",
   "data": {
     "vulnerabilities": [
       {
@@ -22,15 +22,6 @@
         "fix": "Before:\nif(isset($params['filter']) && is_array($params['filter'])){\n    $query['filter'] = $params['filter'];\n}\n\nAfter:\nif(isset($params['filter']) && is_array($params['filter'])){\n    $query['filter'] = [];\n    foreach($params['filter'] as $fk=>$fv){\n        $fKey = ltrim((string)$fk, '=<>%@*');\n        if(in_array($fKey, $activeFields, true)){\n            $query['filter'][$fk] = $fv;\n        }\n    }\n}"
       },
       {
-        "file": "lib/api/controller/mcp/tools.php",
-        "line": "449-718",
-        "type": "Path Traversal",
-        "severity": "medium",
-        "description": "Подтверждено: инструмент tools/log_set (вызывается по MCP-транзиту bxmcp.callrpc) позволяет записывать лог-файл по произвольному абсолютному пути вне DOCUMENT_ROOT и в служебные каталоги (/bitrix/php_interface/ и т.п.). Дополнительно params.class_name принимает произвольное имя класса обработчика лога без проверки существования — класс инстанцируется Bitrix при обработке исключений. Воспроизводится прежняя находка JF-22 (accepted_risk, medium).",
-        "recommendation": "Ограничить путь лога каталогом внутри DOCUMENT_ROOT (например /local/logs/), запретить запись в /bitrix/php_interface/ по умолчанию; для class_name проверять существование класса и допускать только наследников \\Bitrix\\Main\\Diag\\ExceptionHandlerLog.",
-        "fix": "Before:\n$className = '';\nif(isset($extra['class_name']) && is_string($extra['class_name']) && trim($extra['class_name'])!==''){\n    $className = trim($extra['class_name']);\n}\n\nAfter:\n$className = '';\nif(isset($extra['class_name']) && is_string($extra['class_name']) && trim($extra['class_name'])!==''){\n    $candidate = trim($extra['class_name']);\n    if(class_exists($candidate) && is_subclass_of($candidate, '\\\\Bitrix\\\\Main\\\\Diag\\\\ExceptionHandlerLog')){\n        $className = $candidate;\n    }else{\n        throw new \\Exception('недопустимый class_name: класс не найден или не является ExceptionHandlerLog');\n    }\n}"
-      },
-      {
         "file": "lib/adminpages/hooksedit.php",
         "line": "37-47",
         "type": "Cross-Site Scripting",
@@ -40,13 +31,13 @@
         "fix": "Before:\nif(!$this->saved) {\n    $value = (isset($_REQUEST[$name]) && array_key_exists($name, $_REQUEST)) ? $_REQUEST[$name] : $defValue;\n}\n\nAfter:\nif(!$this->saved) {\n    $value = (isset($_REQUEST[$name]) && array_key_exists($name, $_REQUEST)) ? $_REQUEST[$name] : $defValue;\n    if(is_scalar($value)){\n        $value = htmlspecialcharsbx((string)$value);\n    }\n}"
       },
       {
-        "file": "lib/api/controller/app.php",
-        "line": "404-440",
-        "type": "IDOR",
-        "severity": "low",
-        "description": "Подтверждено: метод add() фильтрует входные поля только по isActive и игнорирует флаг isReadOnly, тогда как update() проверяет isReadOnly !== 'Y' (строка 445). API-пользователь может задавать системные/вычисляемые поля (например DATE_CREATE, статусы) при создании записи. Воспроизводится прежняя находка JF-19 (low).",
-        "recommendation": "Добавить проверку isReadOnly в add() аналогично update().",
-        "fix": "Before:\nforeach($fieldsParams as $fieldKey=>$fieldValue){\n    if($fieldValue['isActive'] === 'Y'){\n        $activeFields[] = $fieldKey;\n    }\n}\n\nAfter:\nforeach($fieldsParams as $fieldKey=>$fieldValue){\n    if($fieldValue['isActive'] === 'Y' && $fieldValue['isReadOnly'] !== 'Y'){\n        if(mb_strpos($fieldKey, '.')!==false) continue;\n        $activeFields[] = $fieldKey;\n    }\n}"
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "449-718",
+        "type": "Path Traversal",
+        "severity": "medium",
+        "description": "Подтверждено: инструмент tools/log_set (вызывается по MCP-транзиту bxmcp.callrpc) позволяет записывать лог-файл по произвольному абсолютному пути вне DOCUMENT_ROOT и в служебные каталоги (/bitrix/php_interface/ и т.п.). Дополнительно params.class_name принимает произвольное имя класса обработчика лога без проверки существования — класс инстанцируется Bitrix при обработке исключений. Воспроизводится прежняя находка JF-22 (accepted_risk, medium).",
+        "recommendation": "Ограничить путь лога каталогом внутри DOCUMENT_ROOT (например /local/logs/), запретить запись в /bitrix/php_interface/ по умолчанию; для class_name проверять существование класса и допускать только наследников \\Bitrix\\Main\\Diag\\ExceptionHandlerLog.",
+        "fix": "Before:\n$className = '';\nif(isset($extra['class_name']) && is_string($extra['class_name']) && trim($extra['class_name'])!==''){\n    $className = trim($extra['class_name']);\n}\n\nAfter:\n$className = '';\nif(isset($extra['class_name']) && is_string($extra['class_name']) && trim($extra['class_name'])!==''){\n    $candidate = trim($extra['class_name']);\n    if(class_exists($candidate) && is_subclass_of($candidate, '\\\\Bitrix\\\\Main\\\\Diag\\\\ExceptionHandlerLog')){\n        $className = $candidate;\n    }else{\n        throw new \\Exception('недопустимый class_name: класс не найден или не является ExceptionHandlerLog');\n    }\n}"
       },
       {
         "file": "lib/helper.php",
@@ -67,6 +58,15 @@
         "fix": "Before:\n$origin = $this->origin ?: \\Bitrix\\Main\\Context::getCurrent()->getRequest()->getHeader('Origin');\nif ($origin){\n    $response->addHeader('Access-Control-Allow-Origin', $origin);\n}else{\n    $response->addHeader('Access-Control-Allow-Origin', \"*\");\n}\n\nAfter:\n$origin = $this->origin ?: \\Bitrix\\Main\\Context::getCurrent()->getRequest()->getHeader('Origin');\n$allowed = array_filter(array_map('trim', explode(',', (string)\\Bitrix\\Main\\Config\\Option::get('awz.bxorm', 'mcp_cors_origins', ''))));\nif($origin && in_array((string)$origin, $allowed, true)){\n    $response->addHeader('Access-Control-Allow-Origin', (string)$origin);\n}\n// без allowlist — CORS-заголовок не устанавливается"
       },
       {
+        "file": "lib/api/controller/app.php",
+        "line": "404-440",
+        "type": "IDOR",
+        "severity": "low",
+        "description": "Подтверждено: метод add() фильтрует входные поля только по isActive и игнорирует флаг isReadOnly, тогда как update() проверяет isReadOnly !== 'Y' (строка 445). API-пользователь может задавать системные/вычисляемые поля (например DATE_CREATE, статусы) при создании записи. Воспроизводится прежняя находка JF-19 (low).",
+        "recommendation": "Добавить проверку isReadOnly в add() аналогично update().",
+        "fix": "Before:\nforeach($fieldsParams as $fieldKey=>$fieldValue){\n    if($fieldValue['isActive'] === 'Y'){\n        $activeFields[] = $fieldKey;\n    }\n}\n\nAfter:\nforeach($fieldsParams as $fieldKey=>$fieldValue){\n    if($fieldValue['isActive'] === 'Y' && $fieldValue['isReadOnly'] !== 'Y'){\n        if(mb_strpos($fieldKey, '.')!==false) continue;\n        $activeFields[] = $fieldKey;\n    }\n}"
+      },
+      {
         "file": "lib/api/controller/mcp/tools.php",
         "line": "723-779",
         "type": "Information Disclosure",
@@ -74,9 +74,45 @@
         "description": "Подтверждено: инструмент tools/file_get ограничен корнем сайта, черным списком служебных файлов (dbconn.php, .settings.php, .env и т.д.) и каталогов (bitrix/backup/ и т.п.), но дефолтный whitelist каталогов mcp_file_whitelist включает /bitrix/php_interface/, /bitrix/modules/, /local/ — владелец токена может прочитать исходный код всех модулей и кастомной логики сайта. Прежняя находка JF-22 (accepted_risk, medium) в части file_get смягчена blacklist'ом; остаточный риск — чтение исходников по широкому дефолтному whitelist.",
         "recommendation": "Сузить дефолтный whitelist (например только /upload/ и /local/logs/), требовать явной настройки для /bitrix/php_interface/ и /bitrix/modules/.",
         "fix": "Before:\n(string)\\Bitrix\\Main\\Config\\Option::get('awz.bxorm', 'mcp_file_whitelist',\n    '/bitrix/php_interface/,/bitrix/modules/,/local/,/upload/')\n\nAfter:\n(string)\\Bitrix\\Main\\Config\\Option::get('awz.bxorm', 'mcp_file_whitelist',\n    '/upload/,/local/logs/')"
+      },
+      {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": 1041,
+        "type": "information_disclosure",
+        "severity": "medium",
+        "description": "Инструмент iblocks использует CIBlock::GetList с CHECK_PERMISSIONS='N' (строка 1051), что раскрывает полный список инфоблоков (ID, NAME, CODE, IBLOCK_TYPE_ID, ELEMENTS_CNT) любому аутентифицированному пользователю по токену MCP, включая внутренние/непубликуемые инфоблоки.",
+        "recommendation": "Заменить CIBlock::GetList на DB-запрос с белым списком разрешённых IBLOCK_ID, либо добавить проверку прав через CIBlock::Access() для каждого найденного инфоблока.",
+        "fix": "Удалить CHECK_PERMISSIONS=N и добавить CIBlock::CheckAccess() для каждого результата."
+      },
+      {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": 1105,
+        "type": "unrestricted_file_upload",
+        "severity": "medium",
+        "description": "Инструменты loadphoto/tmppphoto принимают base64-данные изображения без проверки размера. base64_decode (строка 1160) декодирует произвольный объём данных в память. При отправке 10MB+ base64-строки (около 7.5MB decoded) возможно переполнение памяти (DoS). MaxFileSize не ограничен.",
+        "recommendation": "Добавить ограничение на размер decoded-данных (например max 5MB): if(strlen($decodedData) > 5*1024*1024) return null;",
+        "fix": "Добавить проверку: if(strlen($decodedData) > MAX_FILE_SIZE) return null; где MAX_FILE_SIZE — константа (например 5242880)."
+      },
+      {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": 1182,
+        "type": "stored_xss",
+        "severity": "medium",
+        "description": "SVG-изображения сохраняются с расширением .svg (detectImageExt строки 1206-1208, PHOTO_ALLOWED_EXTENSIONS строка 1034 содержит 'svg') и возвращаются как публичный HTTPS-URL (строка 1182). Браузер автоматически рендерит SVG как изображение, выполняя embedded <script>, <animate>. Любой аутентифицированный пользователь может сохранить вредоносный SVG для выполнения XSS при открытии URL.",
+        "recommendation": "Отключить SVG из PHOTO_ALLOWED_EXTENSIONS, либо sanitize SVG перед сохранением. Альтернативно — сохранять как .png через GD/ImageMagick.",
+        "fix": "Удалить 'svg' из PHOTO_ALLOWED_EXTENSIONS или sanitize SVG DOM перед file_put_contents."
+      },
+      {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": 1123,
+        "type": "directory_cleanup_bypass",
+        "severity": "low",
+        "description": "Таймаут файлов в /upload/awz.gen.tmp/ (tmpphotoAction) реализуется через glob+unlink при каждом вызове (строки 1129-1133), а не через cron/таймер. Старые файлы накапливаются между вызовами и никогда не очищаются, если инструмент tmpphotone используется регулярно.",
+        "recommendation": "Реализовать периодическую очистку через cron или Bitrix event с таймером.",
+        "fix": "Перенести cleanup в отдельный скрипт, запускаемый по cron/bitrix timer."
       }
     ],
-    "summary": "Итоговое количество находок: 8. Распределение по severity: high — 1 (имперсонализация в AppAuth), medium — 3 (IDOR filter без whitelist в app.php getList; Path Traversal/конфиг-манипуляция tools/log_set; reflected XSS в hooksedit.php), low — 4 (add() игнорирует isReadOnly; токен в URL helper.php; CORS reflection nocors.php; file_get широкий дефолтный whitelist). riskLevel = high. Сверка с журналом security-journal.json (25 находок: 20 fixed, 5 accepted_risk): все 5 accepted_risk воспроизводятся в текущем коде и включены в отчет (JF-21 -> high AppAuth; JF-22 -> medium log_set + low file_get; JF-23 -> medium hooksedit XSS; JF-24 -> low token_in_url; JF-25 -> low nocors). Все 20 findings со статусом fixed подтверждены как исправленные: blacklist file_get (b4353b2) присутствует (константы FILE_READ_BLACKLIST/FILE_READ_BLACKLIST_DIRS, checkFileReadAllowed, строки 723-779); hash_equals в Helper::checkServiceKey (строка 293) подтверждает исправление timing_attack JF-4; права 'D' в admin/hooks_edit.php:14-18 — стандартная GetGroupRight-проверка на месте (JF-20 fixed подтвержден). Отклоненные сигналы recon: (1) Sink: OS command tools.php:964-966 — shell_exec('top -b -n 1'), shell_exec('free -m'), shell_exec('nproc') с полностью константными командами, пользовательский ввод в команду не попадает -> не Command Injection; (2) Sink: SQL tools.php:984 — getConnection()->getType()/getVersion()/getHost()/getDatabase() — только метаданные, SQL-конкатенаций нет, ORM-запросы MethodsTable/HooksTable через Bitrix ORM с безопасным фильтром -> не SQL Injection; (3) Sink: deserialize — все unserialize вызываются с allowed_classes=false (appauth.php:43 и др.) -> безопасное использование; (4) Sink: include/require var — app.php:164 Loader::includeModule($module) — $module из MODULES метода, настроенного администратором в MethodsTable (не из запроса) -> отклонено; (5) Sink: file ops on var tools.php:246,382,821,837 — 246: fopen($path) лог-файла из настроек .settings.php (не из запроса); 382: file_put_contents($real,'') усечение лога по проверенному пути (docroot+checkFileReadAllowed); 821,837: чтение в file_getAction с docroot-ограничением, realpath и blacklist/whitelist -> покрыты находкой low file_get whitelist, прямой Path Traversal отклонен.",
+    "summary": "Итоговое количество находок: 12. Распределение по severity: high — 1 (imersonalization в AppAuth:95); medium — 5 (IDOR filter whitelist app.php:535; config manipulation log_set class_name tools.php:451; iblocks info_disclosure CHECK_PERMISSIONS=N tools.php:1041; stored_xss через SVG tools.php:1182; unrestricted upload DoS no size check tools.php:1105); low — 6 (add() ignores isReadOnly app.php:419; token_in_url helper.php:179; CORS reflection nocors.php:34; wide whitelist file_get tools.php:769; reflected XSS hooksedit.php:38; directory cleanup bypass tools.php:1123). riskLevel = high. Сверка с предыдущим отчетом v1.1.3 (report.json, requestId awz.bxorm-1793180950, 8 findings): все 8 подтверждены в текущем коде с обновлёнными номерами строк. Добавлены 4 новых finding из изменений версии 1.1.4 (app.php server version 1.8.0 + tools.php новые инструменты iblocks/loadphoto/tmppphoto): iblocks CHECK_PERMISSIONS=N (medium), SVG stored_xss (medium), unrestricted upload size (medium), directory cleanup bypass (low). Файлы lib/api/controller/mcp/app.php и lib/api/controller/mcp/tools.php — единственные изменённые с версии 1.1.3.",
     "scannedFiles": 78,
     "riskLevel": "high",
     "auditedFiles": [
@@ -91,11 +127,16 @@
       "admin/methods_list.php",
       "install/index.php",
       "install/solution.php",
+      "install/unstep.php",
+      "install/version.php",
       "install/admin/awz_bxorm_hooks_edit.php",
+      "install/admin/awz_bxorm_hooks_list.php",
       "install/admin/awz_bxorm_methods_edit.php",
+      "install/admin/awz_bxorm_methods_list.php",
       "lib/helper.php",
       "lib/hooks.php",
       "lib/methods.php",
+      "lib/dict/parameters.php",
       "lib/adminpages/hooksedit.php",
       "lib/adminpages/hookslist.php",
       "lib/adminpages/methodsedit.php",
@@ -107,6 +148,19 @@
       "lib/api/controller/mcp/prompts.php",
       "lib/api/controller/mcp/resources.php",
       "lib/api/controller/mcp/tools.php",
+      "lib/api/controller/mcp/Traits/JsonSerializable.php",
+      "lib/api/controller/mcp/DTO/Tool/ToolListItem.php",
+      "lib/api/controller/mcp/DTO/Tool/PropertySchema.php",
+      "lib/api/controller/mcp/DTO/Tool/PropertyItemsSchema.php",
+      "lib/api/controller/mcp/DTO/Tool/OutputSchema.php",
+      "lib/api/controller/mcp/DTO/Tool/InputSchema.php",
+      "lib/api/controller/mcp/DTO/Info/SystemInfo.php",
+      "lib/api/controller/mcp/DTO/Info/PhpInfo.php",
+      "lib/api/controller/mcp/DTO/Info/EnvInfo.php",
+      "lib/api/controller/mcp/DTO/Info/DatabaseInfo.php",
+      "lib/api/controller/mcp/DTO/Info/BitrixModuleItemInfo.php",
+      "lib/api/controller/mcp/DTO/Info/BitrixInfo.php",
+      "lib/api/binderresult.php",
       "lib/api/filters/appauth.php",
       "lib/api/filters/checkmethod.php",
       "lib/api/filters/nocors.php",
@@ -119,6 +173,9 @@
       "lib/api/filters/request/sign.php",
       "lib/api/scopes/basefilter.php",
       "lib/api/scopes/controller.php",
+      "lib/api/scopes/iscope.php",
+      "lib/api/scopes/parameters.php",
+      "lib/api/scopes/scopecollection.php",
       "lib/api/scopes/scope.php",
       "lib/api/type/parameters.php"
     ]

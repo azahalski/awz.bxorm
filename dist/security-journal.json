@@ -5,15 +5,15 @@
   },
   "current_state": {
     "status": "needs_review",
-    "last_run_id": "awz.bxorm-1793180950",
+    "last_run_id": "awz-bxorm-114",
     "archive_sha256": null,
     "open_findings": 0,
     "blocking_findings_open": 0,
     "false_positive_findings": 0,
-    "accepted_risk_findings": 8,
+    "accepted_risk_findings": 12,
     "fixed_findings": 25,
     "removed_findings": 0,
-    "total_findings": 33
+    "total_findings": 37
   },
   "runs": [
     {
@@ -124,6 +124,25 @@
         "still_open_findings": 0,
         "reopened_findings": 0,
         "resolved_since_previous_run": 5
+      }
+    },
+    {
+      "run_id": "awz-bxorm-114",
+      "created_at": "2026-11-08T01:38:42+00:00",
+      "archive_sha256": null,
+      "scanner_request_id": "awz-bxorm-114",
+      "input_summary": "Итоговое количество находок: 12. Распределение по severity: high — 1 (imersonalization в AppAuth:95); medium — 5 (IDOR filter whitelist app.php:535; config manipulation log_set class_name tools.php:451; iblocks info_disclosure CHECK_PERMISSIONS=N tools.php:1041; stored_xss через SVG tools.php:1182; unrestricted upload DoS no size check tools.php:1105); low — 6 (add() ignores isReadOnly app.php:419; token_in_url helper.php:179; CORS reflection nocors.php:34; wide whitelist file_get tools.php:769; reflected XSS hooksedit.php:38; directory cleanup bypass tools.php:1123). riskLevel = high. Сверка с предыдущим отчетом v1.1.3 (report.json, requestId awz.bxorm-1793180950, 8 findings): все 8 подтверждены в текущем коде с обновлёнными номерами строк. Добавлены 4 новых finding из изменений версии 1.1.4 (app.php server version 1.8.0 + tools.php новые инструменты iblocks/loadphoto/tmppphoto): iblocks CHECK_PERMISSIONS=N (medium), SVG stored_xss (medium), unrestricted upload size (medium), directory cleanup bypass (low). Файлы lib/api/controller/mcp/app.php и lib/api/controller/mcp/tools.php — единственные изменённые с версии 1.1.3.",
+      "summary": {
+        "current_scan_findings": 12,
+        "severity_counts": {
+          "high": 1,
+          "medium": 6,
+          "low": 5
+        },
+        "new_findings": 4,
+        "still_open_findings": 8,
+        "reopened_findings": 0,
+        "resolved_since_previous_run": 0
       }
     }
   ],
@@ -1784,7 +1803,7 @@
       "severity": "medium",
       "status": "accepted_risk",
       "first_seen_run_id": "awz.bxorm-1793180950",
-      "last_seen_run_id": "awz.bxorm-1793180950",
+      "last_seen_run_id": "awz-bxorm-114",
       "resolved_run_id": null,
       "original_location": {
         "file": "lib/api/filters/appauth.php",
@@ -1818,7 +1837,7 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski",
-          "updated_at": "2026-10-28T06:55:02+00:00"
+          "updated_at": "2026-11-08T09:29:19+00:00"
         }
       },
       "events": [
@@ -1839,6 +1858,40 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "detected_again",
+          "at": "2026-11-08T01:38:42+00:00",
+          "location": {
+            "file": "lib/api/filters/appauth.php",
+            "line": "95-101"
+          },
+          "status": "accepted_risk"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T01:39:54+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T01:43:47+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T09:29:19+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
         }
       ]
     },
@@ -1849,7 +1902,7 @@
       "severity": "high",
       "status": "accepted_risk",
       "first_seen_run_id": "awz.bxorm-1793180950",
-      "last_seen_run_id": "awz.bxorm-1793180950",
+      "last_seen_run_id": "awz-bxorm-114",
       "resolved_run_id": null,
       "original_location": {
         "file": "lib/api/controller/app.php",
@@ -1883,7 +1936,7 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski",
-          "updated_at": "2026-10-28T06:55:02+00:00"
+          "updated_at": "2026-11-08T09:29:19+00:00"
         }
       },
       "events": [
@@ -1904,6 +1957,40 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "detected_again",
+          "at": "2026-11-08T01:38:42+00:00",
+          "location": {
+            "file": "lib/api/controller/app.php",
+            "line": "534-536"
+          },
+          "status": "accepted_risk"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T01:39:54+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T01:43:47+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T09:29:19+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
         }
       ]
     },
@@ -1914,7 +2001,7 @@
       "severity": "medium",
       "status": "accepted_risk",
       "first_seen_run_id": "awz.bxorm-1793180950",
-      "last_seen_run_id": "awz.bxorm-1793180950",
+      "last_seen_run_id": "awz-bxorm-114",
       "resolved_run_id": null,
       "original_location": {
         "file": "lib/api/controller/mcp/tools.php",
@@ -1948,7 +2035,7 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski",
-          "updated_at": "2026-10-28T06:55:02+00:00"
+          "updated_at": "2026-11-08T09:29:19+00:00"
         }
       },
       "events": [
@@ -1969,6 +2056,40 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "detected_again",
+          "at": "2026-11-08T01:38:42+00:00",
+          "location": {
+            "file": "lib/api/controller/mcp/tools.php",
+            "line": "449-718"
+          },
+          "status": "accepted_risk"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T01:39:54+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T01:43:47+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T09:29:19+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
         }
       ]
     },
@@ -1979,7 +2100,7 @@
       "severity": "medium",
       "status": "accepted_risk",
       "first_seen_run_id": "awz.bxorm-1793180950",
-      "last_seen_run_id": "awz.bxorm-1793180950",
+      "last_seen_run_id": "awz-bxorm-114",
       "resolved_run_id": null,
       "original_location": {
         "file": "lib/adminpages/hooksedit.php",
@@ -2013,7 +2134,7 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski",
-          "updated_at": "2026-10-28T06:55:02+00:00"
+          "updated_at": "2026-11-08T09:29:19+00:00"
         }
       },
       "events": [
@@ -2034,6 +2155,40 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "detected_again",
+          "at": "2026-11-08T01:38:42+00:00",
+          "location": {
+            "file": "lib/adminpages/hooksedit.php",
+            "line": "37-47"
+          },
+          "status": "accepted_risk"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T01:39:54+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T01:43:47+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T09:29:19+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
         }
       ]
     },
@@ -2044,7 +2199,7 @@
       "severity": "low",
       "status": "accepted_risk",
       "first_seen_run_id": "awz.bxorm-1793180950",
-      "last_seen_run_id": "awz.bxorm-1793180950",
+      "last_seen_run_id": "awz-bxorm-114",
       "resolved_run_id": null,
       "original_location": {
         "file": "lib/api/controller/app.php",
@@ -2078,7 +2233,7 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski",
-          "updated_at": "2026-10-28T06:55:02+00:00"
+          "updated_at": "2026-11-08T09:29:19+00:00"
         }
       },
       "events": [
@@ -2099,6 +2254,40 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "detected_again",
+          "at": "2026-11-08T01:38:42+00:00",
+          "location": {
+            "file": "lib/api/controller/app.php",
+            "line": "404-440"
+          },
+          "status": "accepted_risk"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T01:39:54+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T01:43:47+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T09:29:19+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
         }
       ]
     },
@@ -2109,7 +2298,7 @@
       "severity": "low",
       "status": "accepted_risk",
       "first_seen_run_id": "awz.bxorm-1793180950",
-      "last_seen_run_id": "awz.bxorm-1793180950",
+      "last_seen_run_id": "awz-bxorm-114",
       "resolved_run_id": null,
       "original_location": {
         "file": "lib/helper.php",
@@ -2143,7 +2332,7 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski",
-          "updated_at": "2026-10-28T06:55:02+00:00"
+          "updated_at": "2026-11-08T09:29:19+00:00"
         }
       },
       "events": [
@@ -2164,6 +2353,40 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "detected_again",
+          "at": "2026-11-08T01:38:42+00:00",
+          "location": {
+            "file": "lib/helper.php",
+            "line": "174-182"
+          },
+          "status": "accepted_risk"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T01:39:54+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T01:43:47+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T09:29:19+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
         }
       ]
     },
@@ -2174,7 +2397,7 @@
       "severity": "low",
       "status": "accepted_risk",
       "first_seen_run_id": "awz.bxorm-1793180950",
-      "last_seen_run_id": "awz.bxorm-1793180950",
+      "last_seen_run_id": "awz-bxorm-114",
       "resolved_run_id": null,
       "original_location": {
         "file": "lib/api/filters/nocors.php",
@@ -2208,7 +2431,7 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski",
-          "updated_at": "2026-10-28T06:55:02+00:00"
+          "updated_at": "2026-11-08T09:29:19+00:00"
         }
       },
       "events": [
@@ -2229,6 +2452,40 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "detected_again",
+          "at": "2026-11-08T01:38:42+00:00",
+          "location": {
+            "file": "lib/api/filters/nocors.php",
+            "line": "31-41"
+          },
+          "status": "accepted_risk"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T01:39:54+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T01:43:47+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T09:29:19+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
         }
       ]
     },
@@ -2239,7 +2496,7 @@
       "severity": "low",
       "status": "accepted_risk",
       "first_seen_run_id": "awz.bxorm-1793180950",
-      "last_seen_run_id": "awz.bxorm-1793180950",
+      "last_seen_run_id": "awz-bxorm-114",
       "resolved_run_id": null,
       "original_location": {
         "file": "lib/api/controller/mcp/tools.php",
@@ -2273,7 +2530,7 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski",
-          "updated_at": "2026-10-28T06:55:02+00:00"
+          "updated_at": "2026-11-08T09:29:19+00:00"
         }
       },
       "events": [
@@ -2291,6 +2548,364 @@
           "run_id": "awz.bxorm-1793180950",
           "event": "partner_disposition_updated",
           "at": "2026-10-28T06:55:02+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "detected_again",
+          "at": "2026-11-08T01:38:42+00:00",
+          "location": {
+            "file": "lib/api/controller/mcp/tools.php",
+            "line": "723-779"
+          },
+          "status": "accepted_risk"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T01:39:54+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T01:43:47+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T09:29:19+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00034",
+      "fingerprint": "c80143184f82c32b29ff67d7d920cceb",
+      "type": "information_disclosure",
+      "severity": "medium",
+      "status": "accepted_risk",
+      "first_seen_run_id": "awz-bxorm-114",
+      "last_seen_run_id": "awz-bxorm-114",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1041"
+      },
+      "current_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1041"
+      },
+      "latest_vulnerability": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1041",
+        "type": "information_disclosure",
+        "severity": "medium",
+        "description": "Инструмент iblocks использует CIBlock::GetList с CHECK_PERMISSIONS='N' (строка 1051), что раскрывает полный список инфоблоков (ID, NAME, CODE, IBLOCK_TYPE_ID, ELEMENTS_CNT) любому аутентифицированному пользователю по токену MCP, включая внутренние/непубликуемые инфоблоки.",
+        "recommendation": "Заменить CIBlock::GetList на DB-запрос с белым списком разрешённых IBLOCK_ID, либо добавить проверку прав через CIBlock::Access() для каждого найденного инфоблока.",
+        "fix": "Удалить CHECK_PERMISSIONS=N и добавить CIBlock::CheckAccess() для каждого результата.",
+        "reviewed": {
+          "oldSeverity": "medium",
+          "newSeverity": "medium",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        },
+        "partner_disposition": {
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski",
+          "updated_at": "2026-11-08T09:29:19+00:00"
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "detected",
+          "at": "2026-11-08T01:38:42+00:00",
+          "location": {
+            "file": "lib/api/controller/mcp/tools.php",
+            "line": "1041"
+          },
+          "status": "open"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T01:39:54+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T01:43:47+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T09:29:19+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00035",
+      "fingerprint": "e7d635c006458a7773ae608574675ec4",
+      "type": "unrestricted_file_upload",
+      "severity": "medium",
+      "status": "accepted_risk",
+      "first_seen_run_id": "awz-bxorm-114",
+      "last_seen_run_id": "awz-bxorm-114",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1105"
+      },
+      "current_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1105"
+      },
+      "latest_vulnerability": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1105",
+        "type": "unrestricted_file_upload",
+        "severity": "medium",
+        "description": "Инструменты loadphoto/tmppphoto принимают base64-данные изображения без проверки размера. base64_decode (строка 1160) декодирует произвольный объём данных в память. При отправке 10MB+ base64-строки (около 7.5MB decoded) возможно переполнение памяти (DoS). MaxFileSize не ограничен.",
+        "recommendation": "Добавить ограничение на размер decoded-данных (например max 5MB): if(strlen($decodedData) > 5*1024*1024) return null;",
+        "fix": "Добавить проверку: if(strlen($decodedData) > MAX_FILE_SIZE) return null; где MAX_FILE_SIZE — константа (например 5242880).",
+        "reviewed": {
+          "oldSeverity": "medium",
+          "newSeverity": "medium",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        },
+        "partner_disposition": {
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski",
+          "updated_at": "2026-11-08T09:29:19+00:00"
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "detected",
+          "at": "2026-11-08T01:38:42+00:00",
+          "location": {
+            "file": "lib/api/controller/mcp/tools.php",
+            "line": "1105"
+          },
+          "status": "open"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T01:39:54+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T01:43:47+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T09:29:19+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00036",
+      "fingerprint": "531a84b25233861739c3cf8c8c74ddf5",
+      "type": "stored_xss",
+      "severity": "medium",
+      "status": "accepted_risk",
+      "first_seen_run_id": "awz-bxorm-114",
+      "last_seen_run_id": "awz-bxorm-114",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1182"
+      },
+      "current_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1182"
+      },
+      "latest_vulnerability": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1182",
+        "type": "stored_xss",
+        "severity": "medium",
+        "description": "SVG-изображения сохраняются с расширением .svg (detectImageExt строки 1206-1208, PHOTO_ALLOWED_EXTENSIONS строка 1034 содержит 'svg') и возвращаются как публичный HTTPS-URL (строка 1182). Браузер автоматически рендерит SVG как изображение, выполняя embedded <script>, <animate>. Любой аутентифицированный пользователь может сохранить вредоносный SVG для выполнения XSS при открытии URL.",
+        "recommendation": "Отключить SVG из PHOTO_ALLOWED_EXTENSIONS, либо sanitize SVG перед сохранением. Альтернативно — сохранять как .png через GD/ImageMagick.",
+        "fix": "Удалить 'svg' из PHOTO_ALLOWED_EXTENSIONS или sanitize SVG DOM перед file_put_contents.",
+        "reviewed": {
+          "oldSeverity": "medium",
+          "newSeverity": "medium",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        },
+        "partner_disposition": {
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski",
+          "updated_at": "2026-11-08T09:29:19+00:00"
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "detected",
+          "at": "2026-11-08T01:38:42+00:00",
+          "location": {
+            "file": "lib/api/controller/mcp/tools.php",
+            "line": "1182"
+          },
+          "status": "open"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T01:39:54+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T01:43:47+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T09:29:19+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00037",
+      "fingerprint": "74a69dcb594998167acee901583165c1",
+      "type": "directory_cleanup_bypass",
+      "severity": "low",
+      "status": "accepted_risk",
+      "first_seen_run_id": "awz-bxorm-114",
+      "last_seen_run_id": "awz-bxorm-114",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1123"
+      },
+      "current_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1123"
+      },
+      "latest_vulnerability": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1123",
+        "type": "directory_cleanup_bypass",
+        "severity": "low",
+        "description": "Таймаут файлов в /upload/awz.gen.tmp/ (tmpphotoAction) реализуется через glob+unlink при каждом вызове (строки 1129-1133), а не через cron/таймер. Старые файлы накапливаются между вызовами и никогда не очищаются, если инструмент tmpphotone используется регулярно.",
+        "recommendation": "Реализовать периодическую очистку через cron или Bitrix event с таймером.",
+        "fix": "Перенести cleanup в отдельный скрипт, запускаемый по cron/bitrix timer.",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "low",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        },
+        "partner_disposition": {
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski",
+          "updated_at": "2026-11-08T09:29:19+00:00"
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "detected",
+          "at": "2026-11-08T01:38:42+00:00",
+          "location": {
+            "file": "lib/api/controller/mcp/tools.php",
+            "line": "1123"
+          },
+          "status": "open"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T01:39:54+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T01:43:47+00:00",
+          "status": "accepted_risk",
+          "note": "",
+          "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz-bxorm-114",
+          "event": "partner_disposition_updated",
+          "at": "2026-11-08T09:29:19+00:00",
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski"

@@ -963,17 +963,74 @@ class Tools extends App
      */
     public function processinfoAction(): array
     {
-        $output1 = shell_exec('top -b -n 1');
-        $output2 = shell_exec('free -m');
-        $output3 = shell_exec('nproc');
+        $shellAllowed = function_exists('shell_exec')
+            && stripos((string)ini_get('disable_functions'), 'shell_exec') === false;
 
-        $content = [
-            ["type"=>"text","text"=>'вывод команды top: '.$output1],
-            ["type"=>"text","text"=>'вывод команды free: '.$output2],
-            ["type"=>"text","text"=>'nproc: '.$output3],
-        ];
+        $output1 = null; $output2 = null; $output3 = null;
+        if($shellAllowed){
+            $output1 = @shell_exec('top -b -n 1');
+            $output2 = @shell_exec('free -m');
+            $output3 = @shell_exec('nproc');
+        }
 
-        return ['content'=>$content];
+        if($output1 !== null || $output2 !== null || $output3 !== null){
+            $content = [
+                ["type"=>"text","text"=>'вывод команды top: '.$output1],
+                ["type"=>"text","text"=>'вывод команды free: '.$output2],
+                ["type"=>"text","text"=>'nproc: '.$output3],
+            ];
+            return ['content'=>$content];
+        }
+
+        //shell_exec недоступен (disabled_functions / Windows / пустой вывод) — fallback без shell
+        $lines = ['shell_exec недоступен — данные через sys_getloadavg + /proc/meminfo'];
+
+        $load = function_exists('sys_getloadavg') ? @sys_getloadavg() : false;
+        if(is_array($load) && count($load) >= 3){
+            $lines[] = 'load average (1/5/15 мин): '.implode(', ', array_map(
+                function($v){ return round((float)$v, 2); }, array_slice($load, 0, 3)
+            ));
+        }else{
+            $lines[] = 'load average: sys_getloadavg недоступен на этой системе';
+        }
+
+        $cores = 0;
+        if(is_file('/proc/cpuinfo')){
+            $cpuinfo = @file_get_contents('/proc/cpuinfo');
+            if($cpuinfo !== false){
+                $cores = preg_match_all('/^processor\s*:/m', $cpuinfo);
+            }
+        }
+        $lines[] = 'Ядер CPU: '.($cores > 0 ? $cores : 'неизвестно (/proc/cpuinfo недоступен)');
+
+        if(is_file('/proc/meminfo')){
+            $meminfo = @file_get_contents('/proc/meminfo');
+            $vals = [];
+            if($meminfo !== false){
+                foreach(explode("\n", $meminfo) as $row){
+                    if(preg_match('/^(MemTotal|MemFree|MemAvailable|Buffers|Cached|SwapTotal|SwapFree):\s+(\d+)\s+kB/i', $row, $m)){
+                        $vals[$m[1]] = (int)$m[2];
+                    }
+                }
+            }
+            if(isset($vals['MemTotal'])){
+                $avail = $vals['MemAvailable'] ?? (($vals['MemFree'] ?? 0) + ($vals['Buffers'] ?? 0) + ($vals['Cached'] ?? 0));
+                $used = max(0, $vals['MemTotal'] - $avail);
+                $lines[] = 'Память всего: '.round($vals['MemTotal']/1024).' МБ';
+                $lines[] = 'Память занято: '.round($used/1024).' МБ ('.round($used*100/max(1, $vals['MemTotal'])).'%)';
+                $lines[] = 'Память доступно: '.round($avail/1024).' МБ';
+                if(($vals['SwapTotal'] ?? 0) > 0){
+                    $swapUsed = max(0, $vals['SwapTotal'] - ($vals['SwapFree'] ?? 0));
+                    $lines[] = 'Swap всего: '.round($vals['SwapTotal']/1024).' МБ, занято: '.round($swapUsed/1024).' МБ';
+                }
+            }else{
+                $lines[] = '/proc/meminfo не удалось разобрать';
+            }
+        }else{
+            $lines[] = '/proc/meminfo недоступен (не Linux)';
+        }
+
+        return ['content'=>[["type"=>"text","text"=>implode("\n", $lines)]]];
     }
 
     /**
@@ -1094,6 +1151,60 @@ class Tools extends App
             return ['content'=>[['type'=>'text','text'=>implode("\n", $out)]]];
         }catch(\Throwable $e){
             return ['content'=>[['type'=>'text','text'=>'tool iblocks error: '.$e->getMessage()]], 'isError'=>true];
+        }
+    }
+
+    /**
+     * MCP-инструмент sections: список активных разделов инфоблока каталога.
+     */
+    public function sectionsAction(string $iblock_id){
+        try{
+            if(!Loader::includeModule('iblock')){
+                return ['content'=>[['type'=>'text','text'=>'Модуль iblock не установлен']], 'isError'=>true];
+            }
+            $iblockId = (int)$iblock_id;
+            if(!$iblockId){
+                return ['content'=>[['type'=>'text','text'=>'не указан идентификатор инфоблока (параметр iblock_id)']], 'isError'=>true];
+            }
+            $arFilter = [
+                'IBLOCK_ID' => $iblockId,
+                'ACTIVE' => 'Y',
+                'CHECK_PERMISSIONS' => 'N',
+            ];
+            $arSections = [];
+            $res = \CIBlockSection::GetList(
+                ['LEFT_MARGIN' => 'ASC'],
+                $arFilter,
+                false,
+                ['ID','NAME','IBLOCK_SECTION_ID','CODE','SECTION_PAGE_URL','DEPTH_LEVEL']
+            );
+            while($data = $res->fetch()){
+                $arSections[] = [
+                    'ID' => (int)$data['ID'],
+                    'NAME' => (string)$data['NAME'],
+                    'IBLOCK_SECTION_ID' => (int)($data['IBLOCK_SECTION_ID'] ?? 0),
+                    'CODE' => (string)($data['CODE'] ?? ''),
+                    'SECTION_PAGE_URL' => (string)($data['SECTION_PAGE_URL'] ?? ''),
+                    'DEPTH_LEVEL' => (int)($data['DEPTH_LEVEL'] ?? 0),
+                ];
+            }
+
+            if(empty($arSections)){
+                return ['content'=>[['type'=>'text','text'=>'Разделы не найдены (IBLOCK_ID='.$iblockId.')']]];
+            }
+
+            $out = ['Найдено разделов: '.count($arSections)];
+            foreach($arSections as $section){
+                $out[] = '[#'.$section['ID'].'] '.str_repeat('  ', max(0, $section['DEPTH_LEVEL']-1)).$section['NAME']
+                    .' | код: '.($section['CODE'] !== '' ? $section['CODE'] : '—')
+                    .' | родитель: '.($section['IBLOCK_SECTION_ID'] ? '#'.$section['IBLOCK_SECTION_ID'] : '—')
+                    .' | уровень: '.$section['DEPTH_LEVEL']
+                    .' | url: '.($section['SECTION_PAGE_URL'] !== '' ? $section['SECTION_PAGE_URL'] : '—');
+            }
+
+            return ['content'=>[['type'=>'text','text'=>implode("\n", $out)]]];
+        }catch(\Throwable $e){
+            return ['content'=>[['type'=>'text','text'=>'tool sections error: '.$e->getMessage()]], 'isError'=>true];
         }
     }
 
@@ -1220,13 +1331,14 @@ class Tools extends App
             'phpinfo' => 'Возвращает информацию о php на сайте',
             'cmsinfo' => 'Возвращает информацию о cms и модулях',
             'dbinfo' => 'Возвращает информацию о базе данных',
-            'processinfo' => 'Возвращает информацию о нагрузке системы',
+            'processinfo' => 'Возвращает информацию о нагрузке системы: вывод top/free/nproc через shell_exec, а при недоступном shell — load average через sys_getloadavg, число ядер (/proc/cpuinfo) и память (/proc/meminfo).',
             'log_get' => 'Возвращает содержимое лог-файла Битрикса: type=exception_handling (по умолчанию) — стандартный лог из .settings.php секции log; type=имя PSR-логгера (например awz.bxorm.App) — файл этого логгера из секции loggers. Последние N строк.',
             'log_set' => 'Включает и настраивает лог Битрикса. type=exception_handling (по умолчанию) — системный лог (секция log в exception_handling .settings.php, по умолчанию класс \Bitrix\Main\Diag\FileExceptionHandlerLog); type=имя PSR-логгера — PSR-лог (создается/обновляется логгер в секции loggers, class \Bitrix\Main\Diag\FileLogger). params — доп. параметры системного лога (JSON или массив): class_name (произвольный класс обработчика, без проверки существования) — в log/class_name; ключи settings (log_size, log_error, log_file_size, date_format, trace_format, format, file) — в log/settings; любые другие ключи — на верхний уровень exception_handling. Каталог файла выбирается автоматически: константа AWZ_BXORM_LOG_PATH, затем существующий /local/logs/, затем /local/php_interface/, иначе /bitrix/php_interface/. В file также можно указать полный путь (например /var/www/site/bitrix/php_interface/exceptions.log) — тогда он используется как есть и записывается в settings.file полностью. Отключение — инструмент log_off.',
             'log_off' => 'Полностью отключает системное логирование и debug. type=exception_handling (по умолчанию) — в .settings.php ставится exception_handling.debug=false и удаляется секция log; type=имя PSR-логгера — логгер удаляется из секции loggers.',
             'log_clear' => 'Усекает (ротирует) лог-файл: содержимое обнуляется, настройки логирования сохраняются и продолжают работать. Файл берется из настроек (type=exception_handling — секция log .settings.php; type=имя PSR-логгера — файл логгера) или задается явно параметром file (те же ограничения, что у file_get).',
             'file_get' => 'Возвращает содержимое файла (путь абсолютный или от корня сайта) — целиком или выбранные строки. Используй, чтобы прочитать файл, на который указала ошибка в логе.',
             'iblocks' => 'Возвращает список инфоблоков сайта (ID, название, код, тип, активность, количество элементов). Используй для выбора IBLOCK_ID перед работой с инфоблоками. Параметры: name — подстрока поиска по названию, type — фильтр по типу инфоблока (IBLOCK_TYPE_ID), active_only — Y (по умолчанию, только активные) / N.',
+            'sections' => 'Возвращает список активных разделов инфоблока (ID, NAME, IBLOCK_SECTION_ID, CODE, SECTION_PAGE_URL, DEPTH_LEVEL) в порядке дерева. Используй после iblocks для выбора SECTION_ID. Параметр iblock_id обязателен.',
             'loadphoto' => 'Сохраняет постоянное изображение из base64 в /upload/awz.load.ai/ и возвращает публичный URL. Используй для картинок, вставляемых в HTML внутри материалов. Поддерживаемые форматы: png, jpg, jpeg, webp, svg, gif. Параметр photo — base64-строка (допустим префикс data:image/...;base64,).',
             'tmpphoto' => 'Сохраняет временное изображение из base64 в /upload/awz.gen.tmp/ и возвращает публичный URL. Используй для загрузки в фото превью/детальное (файлы старше 1 часа удаляются автоматически). Поддерживаемые форматы: png, jpg, jpeg, webp, svg, gif. Параметр photo — base64-строка (допустим префикс data:image/...;base64,).'
         ];
@@ -1321,6 +1433,15 @@ class Tools extends App
                     ),
                 ],
                 'required' => []
+            ],
+            'sections' => [
+                'properties' => [
+                    'iblock_id' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'ID инфоблока (получить через инструмент iblocks). Обязательно.'
+                    ),
+                ],
+                'required' => ['iblock_id']
             ],
             'loadphoto' => [
                 'properties' => [

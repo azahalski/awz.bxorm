@@ -231,6 +231,16 @@ class App extends Controller
                     )
                 ],
             ],
+            'tools/sections'=>[
+                'prefilters' => [
+                    new NoCors([],[]),
+                    new AppAuth(
+                        [], [],
+                        Scope::createFromCode('user'),
+                        []
+                    )
+                ],
+            ],
             'tools/loadphoto'=>[
                 'prefilters' => [
                     new NoCors([],[]),
