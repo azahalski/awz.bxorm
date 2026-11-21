@@ -1272,9 +1272,6 @@ class Tools extends App
         if($decodedData === false || $decodedData === ''){
             return null;
         }
-        if(strlen($decodedData) > 5*1024*1024){
-            return null;
-        }
 
         $ext = $this->detectImageExt($decodedData);
         if($ext === '' || !in_array($ext, self::PHOTO_ALLOWED_EXTENSIONS, true)){
@@ -1325,6 +1322,528 @@ class Tools extends App
         return '';
     }
 
+    /**
+     * Возвращает ID инфоблока по ID элемента (ElementTable).
+     */
+    private function getElementIblockId(int $elementId): int
+    {
+        if($elementId <= 0) return 0;
+        try{
+            $row = \Bitrix\Iblock\ElementTable::getRow([
+                'select' => ['IBLOCK_ID'],
+                'filter' => ['=ID' => $elementId]
+            ]);
+            return $row ? (int)$row['IBLOCK_ID'] : 0;
+        }catch(\Throwable $e){
+            return 0;
+        }
+    }
+
+    /**
+     * Возвращает элемент по ID (для резолва инфоблока, D7).
+     */
+    private function getElementRow(int $id): array
+    {
+        if($id <= 0) return [];
+        try{
+            $row = \Bitrix\Iblock\ElementTable::getRowById($id);
+            return $row ? (array)$row : [];
+        }catch(\Throwable $e){
+            return [];
+        }
+    }
+
+    /**
+     * Обновляет поисковый и фасетный индекс элемента и пересчитывает
+     * наследуемые мета-значения. В параметрах — только ID элемента,
+     * ID инфоблока определяется автоматически.
+     */
+    public function reindexitemAction(string $id)
+    {
+        try{
+            if(!Loader::includeModule('iblock')){
+                return ['content'=>[['type'=>'text','text'=>'Модуль iblock не установлен']], 'isError'=>true];
+            }
+            $elementId = (int)$id;
+            if(!$elementId){
+                return ['content'=>[['type'=>'text','text'=>'не указан идентификатор элемента (параметр id)']], 'isError'=>true];
+            }
+            $iblockId = $this->getElementIblockId($elementId);
+            if(!$iblockId){
+                $elem = $this->getElementRow($elementId);
+                $iblockId = $elem ? (int)$elem['IBLOCK_ID'] : 0;
+            }
+            if(!$iblockId){
+                return ['content'=>[['type'=>'text','text'=>'Элемент не найден: '.$elementId]], 'isError'=>true];
+            }
+
+            \CIBlockElement::UpdateSearch($elementId, true);
+            \Bitrix\Iblock\PropertyIndex\Manager::updateElementIndex($iblockId, $elementId);
+            $ipropValues = new \Bitrix\Iblock\InheritedProperty\ElementValues($iblockId, $elementId);
+            $ipropValues->clearValues();
+
+            return ['content'=>[['type'=>'text','text'=>'Обновлены поисковый и фасетный индексы, пересчитаны мета элемента #'.$elementId.' (IBLOCK_ID='.$iblockId.')']]];
+        }catch(\Throwable $e){
+            return ['content'=>[['type'=>'text','text'=>'tool reindexitem error: '.$e->getMessage()]], 'isError'=>true];
+        }
+    }
+
+    /**
+     * Обновляет значение свойства элемента инфоблока по коду свойства.
+     */
+    public function updateitempropAction(string $id, string $code, $value)
+    {
+        try{
+            if(!Loader::includeModule('iblock')){
+                return ['content'=>[['type'=>'text','text'=>'Модуль iblock не установлен']], 'isError'=>true];
+            }
+            $elementId = (int)$id;
+            if(!$elementId){
+                return ['content'=>[['type'=>'text','text'=>'не указан идентификатор элемента (параметр id)']], 'isError'=>true];
+            }
+            $code = trim($code);
+            if($code === ''){
+                return ['content'=>[['type'=>'text','text'=>'не указан код свойства (параметр code)']], 'isError'=>true];
+            }
+            $elem = $this->getElementRow($elementId);
+            if(!$elem){
+                return ['content'=>[['type'=>'text','text'=>'Элемент не найден: '.$elementId]], 'isError'=>true];
+            }
+
+            \CIBlockElement::SetPropertyValueCode($elementId, $code, $value);
+
+            return ['content'=>[['type'=>'text','text'=>'Свойство '.$code.' элемента #'.$elementId.' обновлено']]];
+        }catch(\Throwable $e){
+            return ['content'=>[['type'=>'text','text'=>'tool updateitemprop error: '.$e->getMessage()]], 'isError'=>true];
+        }
+    }
+
+    /**
+     * Очищает мета-теги элемента (шаблоны наследуемых свойств + кеш значений).
+     */
+    public function deletemetaitemAction(string $id)
+    {
+        try{
+            if(!Loader::includeModule('iblock')){
+                return ['content'=>[['type'=>'text','text'=>'Модуль iblock не установлен']], 'isError'=>true];
+            }
+            $elementId = (int)$id;
+            if(!$elementId){
+                return ['content'=>[['type'=>'text','text'=>'не указан идентификатор элемента (параметр id)']], 'isError'=>true];
+            }
+            $elem = $this->getElementRow($elementId);
+            if(!$elem){
+                return ['content'=>[['type'=>'text','text'=>'Элемент не найден: '.$elementId]], 'isError'=>true];
+            }
+            $iblockId = (int)$elem['IBLOCK_ID'];
+
+            $seoTemplates = new \Bitrix\Iblock\InheritedProperty\ElementTemplates($iblockId, $elementId);
+            $seoTemplates->set([
+                'ELEMENT_PAGE_TITLE' => '',
+                'ELEMENT_META_TITLE' => '',
+                'ELEMENT_META_DESCRIPTION' => '',
+            ]);
+
+            $ipropValues = new \Bitrix\Iblock\InheritedProperty\ElementValues($iblockId, $elementId);
+            $ipropValues->clearValues();
+
+            return ['content'=>[['type'=>'text','text'=>'Мета-теги элемента #'.$elementId.' очищены']]];
+        }catch(\Throwable $e){
+            return ['content'=>[['type'=>'text','text'=>'tool deletemetaitem error: '.$e->getMessage()]], 'isError'=>true];
+        }
+    }
+
+    /**
+     * Очищает мета-теги раздела (шаблоны наследуемых свойств + кеш значений).
+     */
+    public function deletemetasectionAction(string $id)
+    {
+        try{
+            if(!Loader::includeModule('iblock')){
+                return ['content'=>[['type'=>'text','text'=>'Модуль iblock не установлен']], 'isError'=>true];
+            }
+            $sectionId = (int)$id;
+            if(!$sectionId){
+                return ['content'=>[['type'=>'text','text'=>'не указан идентификатор раздела (параметр id)']], 'isError'=>true];
+            }
+            $section = \CIBlockSection::GetByID($sectionId)->GetNext();
+            if(!$section){
+                return ['content'=>[['type'=>'text','text'=>'Раздел не найден: '.$sectionId]], 'isError'=>true];
+            }
+            $iblockId = (int)$section['IBLOCK_ID'];
+
+            $seoTemplates = new \Bitrix\Iblock\InheritedProperty\SectionTemplates($iblockId, $sectionId);
+            $seoTemplates->set([
+                'SECTION_PAGE_TITLE' => '',
+                'SECTION_META_TITLE' => '',
+                'SECTION_META_DESCRIPTION' => '',
+            ]);
+
+            $ipropValues = new \Bitrix\Iblock\InheritedProperty\SectionValues($iblockId, $sectionId);
+            $ipropValues->clearValues();
+
+            return ['content'=>[['type'=>'text','text'=>'Мета-теги раздела #'.$sectionId.' очищены']]];
+        }catch(\Throwable $e){
+            return ['content'=>[['type'=>'text','text'=>'tool deletemetasection error: '.$e->getMessage()]], 'isError'=>true];
+        }
+    }
+
+    /**
+     * Устанавливает мета-теги элемента (H1, title, description).
+     * Пустые параметры не перезаписывают текущие значения.
+     */
+    public function updateseoitemAction(string $id, string $page_title = '', string $seo_title = '', string $seo_descr = '')
+    {
+        try{
+            if(!Loader::includeModule('iblock')){
+                return ['content'=>[['type'=>'text','text'=>'Модуль iblock не установлен']], 'isError'=>true];
+            }
+            $elementId = (int)$id;
+            if(!$elementId){
+                return ['content'=>[['type'=>'text','text'=>'не указан идентификатор элемента (параметр id)']], 'isError'=>true];
+            }
+            $elem = $this->getElementRow($elementId);
+            if(!$elem){
+                return ['content'=>[['type'=>'text','text'=>'Элемент не найден: '.$elementId]], 'isError'=>true];
+            }
+            $iblockId = (int)$elem['IBLOCK_ID'];
+
+            $el = new \CIBlockElement();
+            $el->Update($elementId, []);
+
+            $seoFields = [];
+            if($page_title !== ''){
+                $seoFields['ELEMENT_PAGE_TITLE'] = $page_title;
+            }
+            if($seo_title !== ''){
+                $seoFields['ELEMENT_META_TITLE'] = $seo_title;
+            }
+            if($seo_descr !== ''){
+                $seoFields['ELEMENT_META_DESCRIPTION'] = $seo_descr;
+            }
+            if(!empty($seoFields)){
+                $seoTemplates = new \Bitrix\Iblock\InheritedProperty\ElementTemplates($iblockId, $elementId);
+                $seoTemplates->set($seoFields);
+            }
+
+            $ipropValues = new \Bitrix\Iblock\InheritedProperty\ElementValues($iblockId, $elementId);
+            $ipropValues->clearValues();
+
+            return ['content'=>[['type'=>'text','text'=>'Мета-теги элемента #'.$elementId.' обновлены'.(!empty($seoFields) ? ': '.implode(', ', array_keys($seoFields)) : '')]]];
+        }catch(\Throwable $e){
+            return ['content'=>[['type'=>'text','text'=>'tool updateitem error: '.$e->getMessage()]], 'isError'=>true];
+        }
+    }
+
+    /**
+     * Устанавливает мета-теги раздела (H1, title, description).
+     * Пустые параметры не перезаписывают текущие значения.
+     */
+    public function updateseosectAction(string $id, string $page_title = '', string $seo_title = '', string $seo_descr = '')
+    {
+        try{
+            if(!Loader::includeModule('iblock')){
+                return ['content'=>[['type'=>'text','text'=>'Модуль iblock не установлен']], 'isError'=>true];
+            }
+            $sectionId = (int)$id;
+            if(!$sectionId){
+                return ['content'=>[['type'=>'text','text'=>'не указан идентификатор раздела (параметр id)']], 'isError'=>true];
+            }
+            $section = \CIBlockSection::GetByID($sectionId)->GetNext();
+            if(!$section){
+                return ['content'=>[['type'=>'text','text'=>'Раздел не найден: '.$sectionId]], 'isError'=>true];
+            }
+            $iblockId = (int)$section['IBLOCK_ID'];
+
+            $seoFields = [];
+            if($page_title !== ''){
+                $seoFields['SECTION_PAGE_TITLE'] = $page_title;
+            }
+            if($seo_title !== ''){
+                $seoFields['SECTION_META_TITLE'] = $seo_title;
+            }
+            if($seo_descr !== ''){
+                $seoFields['SECTION_META_DESCRIPTION'] = $seo_descr;
+            }
+            if(!empty($seoFields)){
+                $seoTemplates = new \Bitrix\Iblock\InheritedProperty\SectionTemplates($iblockId, $sectionId);
+                $seoTemplates->set($seoFields);
+            }
+
+            $ipropValues = new \Bitrix\Iblock\InheritedProperty\SectionValues($iblockId, $sectionId);
+            $ipropValues->clearValues();
+
+            return ['content'=>[['type'=>'text','text'=>'Мета-теги раздела #'.$sectionId.' обновлены'.(!empty($seoFields) ? ': '.implode(', ', array_keys($seoFields)) : '')]]];
+        }catch(\Throwable $e){
+            return ['content'=>[['type'=>'text','text'=>'tool updatesect error: '.$e->getMessage()]], 'isError'=>true];
+        }
+    }
+
+    /**
+     * Возвращает данные элемента инфоблока по ID или фильтру (JSON):
+     * поля элемента + непустые свойства (CODE, NAME, VALUE).
+     */
+    public function getitemAction(string $id = '', string $filter = '', int $limit = 1)
+    {
+        try{
+            if(!Loader::includeModule('iblock')){
+                return ['content'=>[['type'=>'text','text'=>'Модуль iblock не установлен']], 'isError'=>true];
+            }
+            $limit = max(1, min(100, (int)$limit));
+            $arParams = ['CHECK_PERMISSIONS' => 'N'];
+            $filter = trim($filter);
+            if($filter !== ''){
+                $decoded = json_decode($filter, true);
+                if(!is_array($decoded)){
+                    return ['content'=>[['type'=>'text','text'=>'некорректный JSON в параметре filter (ожидается объект вида {"CODE":"value"})']], 'isError'=>true];
+                }
+                foreach($decoded as $key=>$val){
+                    $arParams[(string)$key] = $val;
+                }
+            }
+            $id = trim($id);
+            if($id !== ''){
+                $arParams['ID'] = (int)$id;
+            }
+            if(!isset($arParams['ID']) && count($arParams) <= 1){
+                return ['content'=>[['type'=>'text','text'=>'укажите id элемента или filter (JSON)']], 'isError'=>true];
+            }
+
+            $resOb = \CIBlockElement::GetList([], $arParams, false, ['nTopCount' => $limit]);
+            $items = [];
+            while($resOb && ($res = $resOb->GetNextElement())){
+                $item = $res->GetFields();
+                $item['PROPERTIES'] = [];
+                $props = $res->GetProperties();
+                foreach($props as $propCode=>$prop){
+                    if(empty($prop['VALUE'])) continue;
+                    $item['PROPERTIES'][$propCode] = [
+                        'CODE'=>$propCode,
+                        'NAME'=>$prop['NAME'],
+                        'TYPE'=>$prop['PROPERTY_TYPE'],
+                        'VALUE'=>$prop['VALUE'],
+                    ];
+                }
+                $items[] = $item;
+            }
+
+            if(empty($items)){
+                return ['content'=>[['type'=>'text','text'=>'Элемент не найден (id="'.$id.'", filter='.$filter.')']], 'isError'=>true];
+            }
+
+            $text = ($limit > 1) ? json_encode($items, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)
+                : json_encode($items[0], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+
+            return ['content'=>[['type'=>'text','text'=>$text]]];
+        }catch(\Throwable $e){
+            return ['content'=>[['type'=>'text','text'=>'tool getitem error: '.$e->getMessage()]], 'isError'=>true];
+        }
+    }
+
+    /**
+     * Подготовка файлового поля (фото): путь/URL -> CFile::MakeFileArray.
+     * Пустое значение — не трогаем.
+     */
+    private function preparePhotoValue($value)
+    {
+        if(is_array($value) || $value === null){
+            return $value;
+        }
+        $value = trim((string)$value);
+        if($value === ''){
+            return null;
+        }
+        if($value === 'false' || $value === 'del'){
+            return ['del' => 'Y'];
+        }
+        return \CFile::MakeFileArray($value);
+    }
+
+    /**
+     * Сборка полей элемента из общих параметров (additem/updateitemfields).
+     * fields — доп. поля JSON-строкой или массивом.
+     * Возвращает [fields, error].
+     */
+    private function buildElementFields($iblock_id, string $name, string $description,
+        $section_id, $preview_picture, $detail_picture, string $active, $fields): array
+    {
+        $iblockId = (int)$iblock_id;
+        if($iblockId <= 0){
+            return [[], 'не указан идентификатор инфоблока (параметр iblock_id)'];
+        }
+
+        $arFields = ['IBLOCK_ID' => $iblockId];
+        if(trim($name) !== ''){
+            $arFields['NAME'] = trim($name);
+        }
+        if(trim($description) !== ''){
+            $arFields['DETAIL_TEXT'] = $description;
+            $arFields['DETAIL_TEXT_TYPE'] = preg_match('/<[^>]+>/', $description) ? 'html' : 'text';
+        }
+        $sectionId = (int)$section_id;
+        if($sectionId > 0){
+            $arFields['IBLOCK_SECTION'] = $sectionId;
+        }
+        $photo = $this->preparePhotoValue($preview_picture);
+        if($photo !== null){
+            $arFields['PREVIEW_PICTURE'] = $photo;
+        }
+        $photo = $this->preparePhotoValue($detail_picture);
+        if($photo !== null){
+            $arFields['DETAIL_PICTURE'] = $photo;
+        }
+        $active = strtoupper(trim($active));
+        if($active !== ''){
+            $arFields['ACTIVE'] = ($active === 'N') ? 'N' : 'Y';
+        }else{
+            $arFields['ACTIVE'] = 'Y';
+        }
+
+        if(is_string($fields) && trim($fields) !== ''){
+            $decoded = json_decode($fields, true);
+            if(!is_array($decoded)){
+                return [[], 'некорректный JSON в параметре fields (ожидается объект вида {"CODE":"value"})'];
+            }
+            $fields = $decoded;
+        }
+        if(is_array($fields)){
+            foreach($fields as $key=>$val){
+                $key = (string)$key;
+                if($key === '' || in_array($key, ['IBLOCK_ID', 'ID', 'NAME', 'DETAIL_TEXT', 'DETAIL_TEXT_TYPE',
+                    'IBLOCK_SECTION', 'PREVIEW_PICTURE', 'DETAIL_PICTURE', 'ACTIVE'], true)){
+                    continue;
+                }
+                if(str_starts_with($key, 'PROPERTY_')){
+                    $arFields[$key] = $val;
+                }else{
+                    $arFields[strtoupper($key)] = $val;
+                }
+            }
+        }
+
+        return [$arFields, ''];
+    }
+
+    /**
+     * Генерирует уникальный символьный код на основе названия элемента
+     * в пределах инфоблока. Если код занят, добавляет суффикс (-2, -3, ...).
+     */
+    private function generateUniqueElementCode(int $iblockId, string $name): string
+    {
+        $base = \CUtil::translit($name, 'ru', [
+            'replace_space' => '-',
+            'replace_other' => '-',
+        ]);
+        $base = trim($base, '-');
+        if($base === ''){
+            $base = 'element';
+        }
+
+        try{
+            $code = $base;
+            $suffix = 2;
+            while(
+                \Bitrix\Iblock\ElementTable::getRow([
+                    'select' => ['ID'],
+                    'filter' => ['=IBLOCK_ID' => $iblockId, '=CODE' => $code],
+                    'limit' => 1,
+                ])
+            ){
+                $code = $base.'-'.$suffix;
+                $suffix++;
+            }
+            return $code;
+        }catch(\Throwable $e){
+            return $base.'-'.substr((string)time(), -6);
+        }
+    }
+
+    /**
+     * Добавляет элемент инфоблока: инфоблок, название, описание (детальное),
+     * раздел, фото анонса/детальное (путь/URL), активность (по умолчанию Y),
+     * доп. поля в fields (JSON, в т.ч. PROPERTY_<КОД>).
+     */
+    public function additemAction($iblock_id, string $name = '', string $description = '',
+        $section_id = 0, $preview_picture = '', $detail_picture = '', string $active = 'Y', $fields = [])
+    {
+        try{
+            if(!Loader::includeModule('iblock')){
+                return ['content'=>[['type'=>'text','text'=>'Модуль iblock не установлен']], 'isError'=>true];
+            }
+            [$arFields, $error] = $this->buildElementFields($iblock_id, $name, $description,
+                $section_id, $preview_picture, $detail_picture, $active, $fields);
+            if($error !== ''){
+                return ['content'=>[['type'=>'text','text'=>$error]], 'isError'=>true];
+            }
+            if(trim($arFields['NAME'] ?? '') === ''){
+                return ['content'=>[['type'=>'text','text'=>'не указано название элемента (параметр name)']], 'isError'=>true];
+            }
+            //символьный код: если не передан в fields — генерируется
+            //уникальный в пределах инфоблока из названия
+            $arFields['CODE'] = (string)($arFields['CODE'] ?? '');
+            if(trim($arFields['CODE']) === ''){
+                $arFields['CODE'] = $this->generateUniqueElementCode((int)$iblock_id, (string)$arFields['NAME']);
+            }
+
+            $el = new \CIBlockElement();
+            $newId = $el->Add($arFields, false, true, true);
+            if(!$newId){
+                return ['content'=>[['type'=>'text','text'=>'Ошибка добавления элемента: '.$el->LAST_ERROR]], 'isError'=>true];
+            }
+
+            return ['content'=>[['type'=>'text','text'=>'Элемент добавлен: ID='.(int)$newId.' (IBLOCK_ID='.(int)$iblock_id.')']]];
+        }catch(\Throwable $e){
+            return ['content'=>[['type'=>'text','text'=>'tool additem error: '.$e->getMessage()]], 'isError'=>true];
+        }
+    }
+
+    /**
+     * Изменяет элемент инфоблока: название, описание (детальное), раздел,
+     * фото анонса/детальное (путь/URL; 'false'/'del' — удалить),
+     * активность, доп. поля в fields (JSON, в т.ч. PROPERTY_<КОД>).
+     * Пустые параметры не перезаписывают текущие значения.
+     */
+    public function updateitemfieldsAction(string $id, string $name = '', string $description = '',
+        $section_id = 0, $preview_picture = '', $detail_picture = '', string $active = '', $fields = [])
+    {
+        try{
+            if(!Loader::includeModule('iblock')){
+                return ['content'=>[['type'=>'text','text'=>'Модуль iblock не установлен']], 'isError'=>true];
+            }
+            $elementId = (int)$id;
+            if(!$elementId){
+                return ['content'=>[['type'=>'text','text'=>'не указан идентификатор элемента (параметр id)']], 'isError'=>true];
+            }
+            $elem = $this->getElementRow($elementId);
+            if(!$elem){
+                return ['content'=>[['type'=>'text','text'=>'Элемент не найден: '.$elementId]], 'isError'=>true];
+            }
+            [$arFields, $error] = $this->buildElementFields($elem['IBLOCK_ID'], $name, $description,
+                $section_id, $preview_picture, $detail_picture, $active, $fields);
+            if($error !== ''){
+                return ['content'=>[['type'=>'text','text'=>$error]], 'isError'=>true];
+            }
+            unset($arFields['IBLOCK_ID'], $arFields['ACTIVE']);
+            //активность меняется только если явно передана
+            $activeRaw = strtoupper(trim($active));
+            if($activeRaw === 'Y' || $activeRaw === 'N'){
+                $arFields['ACTIVE'] = $activeRaw;
+            }
+            if(empty($arFields)){
+                return ['content'=>[['type'=>'text','text'=>'Нет данных для обновления (все параметры пусты)']], 'isError'=>true];
+            }
+
+            $el = new \CIBlockElement();
+            if(!$el->Update($elementId, $arFields, false, true)){
+                return ['content'=>[['type'=>'text','text'=>'Ошибка обновления элемента: '.$el->LAST_ERROR]], 'isError'=>true];
+            }
+
+            return ['content'=>[['type'=>'text','text'=>'Элемент #'.$elementId.' обновлен: '.implode(', ', array_keys($arFields))]]];
+        }catch(\Throwable $e){
+            return ['content'=>[['type'=>'text','text'=>'tool updateitemfields error: '.$e->getMessage()]], 'isError'=>true];
+        }
+    }
+
     public function listAction(int $app, $json = []){
 
         $mcpData = \Awz\BxOrm\HooksTable::getRowById($this->getRequest()->get('app'));
@@ -1343,7 +1862,16 @@ class Tools extends App
             'iblocks' => 'Возвращает список инфоблоков сайта (ID, название, код, тип, активность, количество элементов). Используй для выбора IBLOCK_ID перед работой с инфоблоками. Параметры: name — подстрока поиска по названию, type — фильтр по типу инфоблока (IBLOCK_TYPE_ID), active_only — Y (по умолчанию, только активные) / N.',
             'sections' => 'Возвращает список активных разделов инфоблока (ID, NAME, IBLOCK_SECTION_ID, CODE, SECTION_PAGE_URL, DEPTH_LEVEL) в порядке дерева. Используй после iblocks для выбора SECTION_ID. Параметр iblock_id обязателен.',
             'loadphoto' => 'Сохраняет постоянное изображение из base64 в /upload/awz.load.ai/ и возвращает публичный URL. Используй для картинок, вставляемых в HTML внутри материалов. Поддерживаемые форматы: png, jpg, jpeg, webp, svg, gif. Параметр photo — base64-строка (допустим префикс data:image/...;base64,).',
-            'tmpphoto' => 'Сохраняет временное изображение из base64 в /upload/awz.gen.tmp/ и возвращает публичный URL. Используй для загрузки в фото превью/детальное (файлы старше 1 часа удаляются автоматически). Поддерживаемые форматы: png, jpg, jpeg, webp, svg, gif. Параметр photo — base64-строка (допустим префикс data:image/...;base64,).'
+            'tmpphoto' => 'Сохраняет временное изображение из base64 в /upload/awz.gen.tmp/ и возвращает публичный URL. Используй для загрузки в фото превью/детальное (файлы старше 1 часа удаляются автоматически). Поддерживаемые форматы: png, jpg, jpeg, webp, svg, gif. Параметр photo — base64-строка (допустим префикс data:image/...;base64,).',
+            'reindexitem' => 'Обновляет поисковый индекс и фасетный индекс элемента инфоблока и пересчитывает наследуемые мета-значения. Вызывай после изменения элемента/свойств, чтобы изменения появились в поиске и умном фильтре. В параметрах только id элемента — ID инфоблока определяется автоматически.',
+            'updateitemprop' => 'Обновляет значение свойства элемента инфоблока по коду свойства. Параметры: id элемента, code — код свойства, value — новое значение. После изменения вызывай reindexitem для обновления индексов.',
+            'getitem' => 'Возвращает данные элемента инфоблока: все поля + непустые свойства (CODE, NAME, TYPE — тип свойства, VALUE). Поиск по id элемента или по фильтру (JSON-строка, например {"CODE":"my-code"}). limit — количество элементов в ответе (по умолчанию 1, максимум 100; >1 — ответ массив).',
+            'updateseoitem' => 'Устанавливает мета-теги элемента инфоблока: page_title (H1 страницы), seo_title (title), seo_descr (description). Пустые параметры не перезаписывают текущие значения.',
+            'deletemetaitem' => 'Очищает мета-теги элемента инфоблока (H1, title, description) — сбрасывает индивидуальные шаблоны и кеш наследуемых значений.',
+            'additem' => 'Добавляет элемент инфоблока. Параметры: iblock_id (обязателен), name (название, обязателен), description (детальное описание, html определяется автоматически), section_id (ID раздела), preview_picture / detail_picture (путь или URL картинки), active (Y по умолчанию / N), fields — доп. поля JSON-строкой (в т.ч. PROPERTY_<КОД> для свойств, PREVIEW_TEXT, CODE и др.). Символьный код (CODE) если не передан — генерируется автоматически, уникальный в пределах инфоблока. После изменения вызывай reindexitem.',
+            'updateitemfields' => 'Изменяет элемент инфоблока. Параметры: id (обязателен), name, description, section_id, preview_picture / detail_picture (путь или URL; "false"/"del" — удалить файл), active (меняется только при явной передаче Y/N), fields — доп. поля JSON-строкой (в т.ч. PROPERTY_<КОД>). Пустые параметры не перезаписывают текущие значения. После изменения вызывай reindexitem.',
+            'updateseosect' => 'Устанавливает мета-теги раздела инфоблока: page_title (H1 страницы), seo_title (title), seo_descr (description). Пустые параметры не перезаписывают текущие значения.',
+            'deletemetasection' => 'Очищает мета-теги раздела инфоблока (H1, title, description) — сбрасывает индивидуальные шаблоны и кеш наследуемых значений.'
         ];
 
         $schemas = [
@@ -1463,6 +1991,183 @@ class Tools extends App
                     ),
                 ],
                 'required' => ['photo']
+            ],
+            'reindexitem' => [
+                'properties' => [
+                    'id' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'ID элемента инфоблока. Обязательно.'
+                    ),
+                ],
+                'required' => ['id']
+            ],
+            'updateitemprop' => [
+                'properties' => [
+                    'id' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'ID элемента инфоблока. Обязательно.'
+                    ),
+                    'code' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Код свойства (CODE). Обязательно.'
+                    ),
+                    'value' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Новое значение свойства (для множественного — массив в JSON).'
+                    ),
+                ],
+                'required' => ['id', 'code', 'value']
+            ],
+            'getitem' => [
+                'properties' => [
+                    'id' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'ID элемента инфоблока (приоритетнее filter).'
+                    ),
+                    'filter' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Фильтр поиска элемента — JSON-строка, например {"CODE":"my-code"} или {"IBLOCK_ID":5,"NAME":"Товар"}. Используется, если id не задан.'
+                    ),
+                    'limit' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Количество элементов в ответе (по умолчанию 1, максимум 100). При limit>1 ответ — массив элементов.'
+                    ),
+                ],
+                'required' => []
+            ],
+            'updateseoitem' => [
+                'properties' => [
+                    'id' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'ID элемента инфоблока. Обязательно.'
+                    ),
+                    'page_title' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'H1 страницы элемента (ELEMENT_PAGE_TITLE). Пусто — не менять.'
+                    ),
+                    'seo_title' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Title страницы (ELEMENT_META_TITLE). Пусто — не менять.'
+                    ),
+                    'seo_descr' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Description страницы (ELEMENT_META_DESCRIPTION). Пусто — не менять.'
+                    ),
+                ],
+                'required' => ['id']
+            ],
+            'deletemetaitem' => [
+                'properties' => [
+                    'id' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'ID элемента инфоблока. Обязательно.'
+                    ),
+                ],
+                'required' => ['id']
+            ],
+            'updateseosect' => [
+                'properties' => [
+                    'id' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'ID раздела инфоблока. Обязательно.'
+                    ),
+                    'page_title' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'H1 страницы раздела (SECTION_PAGE_TITLE). Пусто — не менять.'
+                    ),
+                    'seo_title' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Title страницы (SECTION_META_TITLE). Пусто — не менять.'
+                    ),
+                    'seo_descr' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Description страницы (SECTION_META_DESCRIPTION). Пусто — не менять.'
+                    ),
+                ],
+                'required' => ['id']
+            ],
+            'deletemetasection' => [
+                'properties' => [
+                    'id' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'ID раздела инфоблока. Обязательно.'
+                    ),
+                ],
+                'required' => ['id']
+            ],
+            'additem' => [
+                'properties' => [
+                    'iblock_id' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'ID инфоблока (получить через инструмент iblocks). Обязательно.'
+                    ),
+                    'name' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Название элемента. Обязательно.'
+                    ),
+                    'description' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Детальное описание (DETAIL_TEXT). Тип html/text определяется автоматически.'
+                    ),
+                    'section_id' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'ID раздела инфоблока (IBLOCK_SECTION).'
+                    ),
+                    'preview_picture' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Путь или URL картинки анонса (PREVIEW_PICTURE).'
+                    ),
+                    'detail_picture' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Путь или URL детальной картинки (DETAIL_PICTURE).'
+                    ),
+                    'active' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Активность элемента: Y (по умолчанию) / N.'
+                    ),
+                    'fields' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Доп. поля — JSON-строка, например {"CODE":"my-code","PROPERTY_MATERIAL":"Сталь","PREVIEW_TEXT":"Анонс"}. PROPERTY_<КОД> — значение свойства.'
+                    ),
+                ],
+                'required' => ['iblock_id', 'name']
+            ],
+            'updateitemfields' => [
+                'properties' => [
+                    'id' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'ID элемента инфоблока. Обязательно.'
+                    ),
+                    'name' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Название элемента. Пусто — не менять.'
+                    ),
+                    'description' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Детальное описание (DETAIL_TEXT). Пусто — не менять.'
+                    ),
+                    'section_id' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'ID раздела инфоблока (IBLOCK_SECTION). 0/пусто — не менять.'
+                    ),
+                    'preview_picture' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Путь или URL картинки анонса; "false"/"del" — удалить файл. Пусто — не менять.'
+                    ),
+                    'detail_picture' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Путь или URL детальной картинки; "false"/"del" — удалить файл. Пусто — не менять.'
+                    ),
+                    'active' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Активность элемента: Y / N. Меняется только при явной передаче.'
+                    ),
+                    'fields' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Доп. поля — JSON-строка, например {"CODE":"my-code","PROPERTY_MATERIAL":"Сталь"}. PROPERTY_<КОД> — значение свойства.'
+                    ),
+                ],
+                'required' => ['id']
             ]
         ];
 
