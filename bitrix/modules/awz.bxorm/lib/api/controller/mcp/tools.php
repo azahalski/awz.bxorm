@@ -1850,7 +1850,7 @@ class Tools extends App
      * Возвращает [fields, error].
      */
     private function buildSectionFields($iblock_id, string $name, string $description,
-        $parent_id, string $code, string $active, $picture, $fields, bool $forUpdate): array
+        $parent_id, string $code, string $active, $picture, $detail_picture, $fields, bool $forUpdate): array
     {
         $iblockId = (int)$iblock_id;
         if($iblockId <= 0){
@@ -1886,6 +1886,10 @@ class Tools extends App
         if($photo !== null){
             $arFields['PICTURE'] = $photo;
         }
+        $photo = $this->preparePhotoValue($detail_picture);
+        if($photo !== null){
+            $arFields['DETAIL_PICTURE'] = $photo;
+        }
 
         if(is_string($fields) && trim($fields) !== ''){
             $decoded = json_decode($fields, true);
@@ -1898,7 +1902,7 @@ class Tools extends App
             foreach($fields as $key=>$val){
                 $key = strtoupper((string)$key);
                 if($key === '' || in_array($key, ['IBLOCK_ID', 'ID', 'NAME', 'DESCRIPTION', 'DESCRIPTION_TYPE',
-                    'IBLOCK_SECTION_ID', 'CODE', 'ACTIVE', 'PICTURE', 'SORT', 'GLOBAL_ACTIVE',
+                    'IBLOCK_SECTION_ID', 'CODE', 'ACTIVE', 'PICTURE', 'DETAIL_PICTURE', 'SORT', 'GLOBAL_ACTIVE',
                     'DEPTH_LEVEL', 'LEFT_MARGIN', 'RIGHT_MARGIN', 'TIMESTAMP_X', 'MODIFIED_BY'], true)){
                     continue;
                 }
@@ -1949,14 +1953,14 @@ class Tools extends App
      * доп. поля в fields (JSON, в т.ч. UF_<КОД>).
      */
     public function addsectionAction($iblock_id, string $name = '', string $description = '',
-        $parent_id = 0, string $code = '', string $active = 'Y', $picture = '', $fields = [])
+        $parent_id = 0, string $code = '', string $active = 'Y', $picture = '', $detail_picture = '', $fields = [])
     {
         try{
             if(!Loader::includeModule('iblock')){
                 return ['content'=>[['type'=>'text','text'=>'Модуль iblock не установлен']], 'isError'=>true];
             }
             [$arFields, $error] = $this->buildSectionFields($iblock_id, $name, $description,
-                $parent_id, $code, $active, $picture, $fields, false);
+                $parent_id, $code, $active, $picture, $detail_picture, $fields, false);
             if($error !== ''){
                 return ['content'=>[['type'=>'text','text'=>$error]], 'isError'=>true];
             }
@@ -1989,7 +1993,7 @@ class Tools extends App
      * Пустые параметры не перезаписывают текущие значения.
      */
     public function updatesectionAction(string $id, string $name = '', string $description = '',
-        string $parent_id = '', string $code = '', string $active = '', $picture = '', $fields = [])
+        string $parent_id = '', string $code = '', string $active = '', $picture = '', $detail_picture = '', $fields = [])
     {
         try{
             if(!Loader::includeModule('iblock')){
@@ -2008,7 +2012,7 @@ class Tools extends App
                 return ['content'=>[['type'=>'text','text'=>'Раздел не найден: '.$sectionId]], 'isError'=>true];
             }
             [$arFields, $error] = $this->buildSectionFields($section['IBLOCK_ID'], $name, $description,
-                $parent_id, $code, $active, $picture, $fields, true);
+                $parent_id, $code, $active, $picture, $detail_picture, $fields, true);
             if($error !== ''){
                 return ['content'=>[['type'=>'text','text'=>$error]], 'isError'=>true];
             }
@@ -2018,8 +2022,12 @@ class Tools extends App
             }
 
             $bs = new \CIBlockSection();
+            if(!is_object($bs) || !($bs instanceof \CIBlockSection)){
+                return ['content'=>[['type'=>'text','text'=>'Ошибка обновления раздела: не создан объект CIBlockSection']], 'isError'=>true];
+            }
+            //Update возвращает true при успехе; при ошибке — false, текст ошибки в LAST_ERROR
             if(!$bs->Update($sectionId, $arFields)){
-                return ['content'=>[['type'=>'text','text'=>'Ошибка обновления раздела: '.$bs->LAST_ERROR]], 'isError'=>true];
+                return ['content'=>[['type'=>'text','text'=>'Ошибка обновления раздела: '.($bs->LAST_ERROR ?: 'неизвестная ошибка Update')]], 'isError'=>true];
             }
 
             return ['content'=>[['type'=>'text','text'=>'Раздел #'.$sectionId.' обновлен: '.implode(', ', array_keys($arFields))]]];
@@ -2111,8 +2119,8 @@ class Tools extends App
             'additem' => 'Добавляет элемент инфоблока. Параметры: iblock_id (обязателен), name (название, обязателен), description (детальное описание, html определяется автоматически), section_id (ID раздела), preview_picture / detail_picture (путь или URL картинки), active (Y по умолчанию / N), fields — доп. поля JSON-строкой (в т.ч. PROPERTY_<КОД> для свойств, PREVIEW_TEXT, CODE и др.). Символьный код (CODE) если не передан — генерируется автоматически, уникальный в пределах инфоблока. После изменения вызывай reindexitem.',
             'updateitemfields' => 'Изменяет элемент инфоблока. Параметры: id (обязателен), name, description, section_id, preview_picture / detail_picture (путь или URL; "false"/"del" — удалить файл), active (меняется только при явной передаче Y/N), fields — доп. поля JSON-строкой (в т.ч. PROPERTY_<КОД>). Пустые параметры не перезаписывают текущие значения. После изменения вызывай reindexitem.',
             'updateseosect' => 'Устанавливает мета-теги раздела инфоблока: page_title (H1 страницы), seo_title (title), seo_descr (description). Пустые параметры не перезаписывают текущие значения.',
-            'addsection' => 'Добавляет раздел инфоблока. Параметры: iblock_id (обязателен), name (название, обязателен), description (описание, html определяется автоматически), parent_id (ID родительского раздела, 0 — корень), code (символьный код; если не передан — генерируется автоматически, уникальный в пределах инфоблока), active (Y по умолчанию / N), picture (путь или URL картинки), fields — доп. поля JSON-строкой, в т.ч. UF_<КОД> (пользовательские свойства раздела) и SORT.',
-            'updatesection' => 'Изменяет раздел инфоблока. Параметры: id (обязателен), name, description, parent_id (ID родительского раздела; пусто — не менять, "0" — перенести в корень), code, active (меняется только при явной передаче Y/N), picture (путь или URL; "false"/"del" — удалить файл), fields — доп. поля JSON-строкой, в т.ч. UF_<КОД> (пользовательские свойства раздела). Пустые параметры не перезаписывают текущие значения.',
+            'addsection' => 'Добавляет раздел инфоблока. Параметры: iblock_id (обязателен), name (название, обязателен), description (описание, html определяется автоматически), parent_id (ID родительского раздела, 0 — корень), code (символьный код; если не передан — генерируется автоматически, уникальный в пределах инфоблока), active (Y по умолчанию / N), picture / detail_picture (путь или URL картинок), fields — доп. поля JSON-строкой, в т.ч. UF_<КОД> (пользовательские свойства раздела) и SORT.',
+            'updatesection' => 'Изменяет раздел инфоблока. Параметры: id (обязателен), name, description, parent_id (ID родительского раздела; пусто — не менять, "0" — перенести в корень), code, active (меняется только при явной передаче Y/N), picture / detail_picture (путь или URL; "false"/"del" — удалить файл), fields — доп. поля JSON-строкой, в т.ч. UF_<КОД> (пользовательские свойства раздела). Пустые параметры не перезаписывают текущие значения.',
             'getsection' => 'Возвращает данные раздела инфоблока: все поля + значения UF_* (пользовательские свойства раздела). Поиск по id раздела или по фильтру (JSON-строка, например {"CODE":"my-code"} или {"IBLOCK_ID":5,"=NAME":"Каталог"}). limit — количество разделов в ответе (по умолчанию 1, максимум 100; >1 — ответ массив).',
             'deletemetasection' => 'Очищает мета-теги раздела инфоблока (H1, title, description) — сбрасывает индивидуальные шаблоны и кеш наследуемых значений.'
         ];
@@ -2366,7 +2374,11 @@ class Tools extends App
                     ),
                     'picture' => new DTO\Tool\PropertySchema(
                         type: 'string',
-                        description: 'Путь или URL картинки раздела (PICTURE).'
+                        description: 'Путь или URL картинки анонса раздела (PICTURE).'
+                    ),
+                    'detail_picture' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Путь или URL детальной картинки (DETAIL_PICTURE).'
                     ),
                     'fields' => new DTO\Tool\PropertySchema(
                         type: 'string',
@@ -2403,7 +2415,11 @@ class Tools extends App
                     ),
                     'picture' => new DTO\Tool\PropertySchema(
                         type: 'string',
-                        description: 'Путь или URL картинки раздела (PICTURE); "false"/"del" — удалить файл. Пусто — не менять.'
+                        description: 'Путь или URL картинки анонса раздела (PICTURE); "false"/"del" — удалить файл. Пусто — не менять.'
+                    ),
+                    'detail_picture' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Путь или URL детальной картинки (DETAIL_PICTURE); "false"/"del" — удалить файл. Пусто — не менять.'
                     ),
                     'fields' => new DTO\Tool\PropertySchema(
                         type: 'string',
