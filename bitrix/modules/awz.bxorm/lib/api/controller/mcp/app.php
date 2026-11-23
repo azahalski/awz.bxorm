@@ -261,6 +261,126 @@ class App extends Controller
                     )
                 ],
             ],
+            'tools/reindexitem'=>[
+                'prefilters' => [
+                    new NoCors([],[]),
+                    new AppAuth(
+                        [], [],
+                        Scope::createFromCode('user'),
+                        []
+                    )
+                ],
+            ],
+            'tools/updateitemprop'=>[
+                'prefilters' => [
+                    new NoCors([],[]),
+                    new AppAuth(
+                        [], [],
+                        Scope::createFromCode('user'),
+                        []
+                    )
+                ],
+            ],
+            'tools/getitem'=>[
+                'prefilters' => [
+                    new NoCors([],[]),
+                    new AppAuth(
+                        [], [],
+                        Scope::createFromCode('user'),
+                        []
+                    )
+                ],
+            ],
+            'tools/updateseoitem'=>[
+                'prefilters' => [
+                    new NoCors([],[]),
+                    new AppAuth(
+                        [], [],
+                        Scope::createFromCode('user'),
+                        []
+                    )
+                ],
+            ],
+            'tools/deletemetaitem'=>[
+                'prefilters' => [
+                    new NoCors([],[]),
+                    new AppAuth(
+                        [], [],
+                        Scope::createFromCode('user'),
+                        []
+                    )
+                ],
+            ],
+            'tools/updateseosect'=>[
+                'prefilters' => [
+                    new NoCors([],[]),
+                    new AppAuth(
+                        [], [],
+                        Scope::createFromCode('user'),
+                        []
+                    )
+                ],
+            ],
+            'tools/deletemetasection'=>[
+                'prefilters' => [
+                    new NoCors([],[]),
+                    new AppAuth(
+                        [], [],
+                        Scope::createFromCode('user'),
+                        []
+                    )
+                ],
+            ],
+            'tools/additem'=>[
+                'prefilters' => [
+                    new NoCors([],[]),
+                    new AppAuth(
+                        [], [],
+                        Scope::createFromCode('user'),
+                        []
+                    )
+                ],
+            ],
+            'tools/updateitemfields'=>[
+                'prefilters' => [
+                    new NoCors([],[]),
+                    new AppAuth(
+                        [], [],
+                        Scope::createFromCode('user'),
+                        []
+                    )
+                ],
+            ],
+            'tools/addsection'=>[
+                'prefilters' => [
+                    new NoCors([],[]),
+                    new AppAuth(
+                        [], [],
+                        Scope::createFromCode('user'),
+                        []
+                    )
+                ],
+            ],
+            'tools/updatesection'=>[
+                'prefilters' => [
+                    new NoCors([],[]),
+                    new AppAuth(
+                        [], [],
+                        Scope::createFromCode('user'),
+                        []
+                    )
+                ],
+            ],
+            'tools/getsection'=>[
+                'prefilters' => [
+                    new NoCors([],[]),
+                    new AppAuth(
+                        [], [],
+                        Scope::createFromCode('user'),
+                        []
+                    )
+                ],
+            ],
         ];
         //авторизация по ключу userId|TOKEN создает сессию — ядро тогда требует
         //CSRF на POST ajax-запросов. Сервисные вызовы идут с ключом app,
