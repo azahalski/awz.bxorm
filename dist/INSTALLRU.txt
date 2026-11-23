@@ -1,0 +1,35 @@
+[B]Документация:[/B] [URL=https://github.com/azahalski/awz.bxorm]https://github.com/azahalski/awz.bxorm[/URL]
+
+[B]Для работы административных страниц необходим установленный модуль[/B] AWZ: Конструктор списков:
+[LIST]
+[*] Маркетплейс - [URL=https://marketplace.1c-bitrix.ru/solutions/awz.admin/]https://marketplace.1c-bitrix.ru/solutions/awz.admin/[/URL]
+[*] GitHub - [URL=https://github.com/azahalski/awz.admin]https://github.com/azahalski/awz.admin[/URL]
+[/LIST]
+
+[SIZE=16pt][B]Установка[/B][/SIZE]
+[LIST=1]
+[*] Установите модуль через систему обновлений
+[*] Добавьте методы для API: [B]Настройки - AWZ: Api на вебхуках - Методы API[/B].
+Доступны контроллеры и ORM-сущности - наследники [B]Bitrix\Main\Engine\Controller[/B], [B]Awz\BxOrm\Api\Scopes\Controller[/B], [B]Bitrix\Main\ORM\Data\DataManager[/B]
+[*] Настройте методы API
+[*] Добавьте веб-хук и отметьте доступные методы
+[*] В списке веб-хуков будут доступны ссылки на методы API
+[/LIST]
+
+[SIZE=16pt][B]Подключение MCP-сервера для ИИ[/B][/SIZE]
+MCP-приложение создается [B]одной кнопкой «Создать MCP»[/B] в настройках модуля: метод и веб-хук с токеном формируются автоматически, URL и ключ готовы к передаче. Повторное нажатие обновляет приложение.
+
+Быстрый старт:
+[LIST=1]
+[*] Нажмите [B]«Создать MCP»[/B] в настройках модуля
+[*] [B]Скопируйте URL и токен[/B] из созданного приложения
+[*] [B]Передайте их своему ИИ-агенту[/B] (Claude или другой MCP-клиент) в промпте, например:
+[/LIST]
+[CODE]Подключись к MCP-серверу по URL:
+https://мой_сайт.ру/bitrix/services/main/ajax.php?...awz:bxorm.api.bxmcp.callrpc&app=<ид_приложения>
+Используй токен: <токен_хука>[/CODE]
+
+[SIZE=16pt][B]Router (по желанию)[/B][/SIZE]
+Для доступа по url вида:
+[CODE]мой_сайт.ру/api/hook/<ид_хука>/<токен_хука>/<метод>[/CODE]
+настройте router по [URL=https://github.com/azahalski/awz.bxorm]документации[/URL].

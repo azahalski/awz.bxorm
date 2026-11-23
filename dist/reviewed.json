@@ -1,6 +1,6 @@
 {
   "success": true,
-  "requestId": "awz.bxorm-1794755519",
+  "requestId": "awz.bxorm-1795437925",
   "data": {
     "vulnerabilities": [
       {
@@ -22,12 +22,6 @@
           "action": "verify-on-latest-version",
           "confidence": "medium",
           "rationale": "Set to medium because the finding describes authorization bypass or privilege misuse, but not a direct high-impact IDOR, financial bug, or confirmed account takeover in the journal text."
-        },
-        "partner_disposition": {
-          "status": "accepted_risk",
-          "note": "",
-          "author": "Andrew Zahalski",
-          "updated_at": "2026-11-15T12:16:30+00:00"
         }
       },
       {
@@ -49,12 +43,6 @@
           "action": "validate-source-and-fix-escaping",
           "confidence": "low",
           "rationale": "Adjusted conservatively because the journal does not clearly prove a low-privileged or public payload source. Confirm source permissions before treating as a blocker."
-        },
-        "partner_disposition": {
-          "status": "accepted_risk",
-          "note": "",
-          "author": "Andrew Zahalski",
-          "updated_at": "2026-11-15T12:16:30+00:00"
         }
       },
       {
@@ -76,12 +64,6 @@
           "action": "fix",
           "confidence": "medium",
           "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
-        },
-        "partner_disposition": {
-          "status": "accepted_risk",
-          "note": "",
-          "author": "Andrew Zahalski",
-          "updated_at": "2026-11-15T12:16:30+00:00"
         }
       },
       {
@@ -103,12 +85,6 @@
           "action": "fix",
           "confidence": "medium",
           "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
-        },
-        "partner_disposition": {
-          "status": "accepted_risk",
-          "note": "",
-          "author": "Andrew Zahalski",
-          "updated_at": "2026-11-15T12:16:30+00:00"
         }
       },
       {
@@ -130,12 +106,6 @@
           "action": "add-sessid-and-owner-checks",
           "confidence": "medium",
           "rationale": "Kept as medium because the finding describes state change without check_bitrix_sessid; raise only if cross-user deletion or higher-impact state change is confirmed."
-        },
-        "partner_disposition": {
-          "status": "accepted_risk",
-          "note": "",
-          "author": "Andrew Zahalski",
-          "updated_at": "2026-11-15T12:16:30+00:00"
         }
       },
       {
@@ -157,12 +127,6 @@
           "action": "harden-output-escaping",
           "confidence": "high",
           "rationale": "Downgraded because the journal describes a stored XSS source controlled by a Bitrix admin/content editor or another trusted content-management role. In BUS such users can normally publish HTML/JS through legitimate site-management mechanisms, so this is template hardening rather than a high module vulnerability unless a low-privileged/external source is proven."
-        },
-        "partner_disposition": {
-          "status": "accepted_risk",
-          "note": "",
-          "author": "Andrew Zahalski",
-          "updated_at": "2026-11-15T12:16:30+00:00"
         }
       },
       {
@@ -184,12 +148,6 @@
           "action": "fix",
           "confidence": "medium",
           "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
-        },
-        "partner_disposition": {
-          "status": "accepted_risk",
-          "note": "",
-          "author": "Andrew Zahalski",
-          "updated_at": "2026-11-15T12:16:30+00:00"
         }
       },
       {
@@ -211,12 +169,6 @@
           "action": "fix",
           "confidence": "medium",
           "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
-        },
-        "partner_disposition": {
-          "status": "accepted_risk",
-          "note": "",
-          "author": "Andrew Zahalski",
-          "updated_at": "2026-11-15T12:16:30+00:00"
         }
       },
       {
@@ -238,12 +190,6 @@
           "action": "fix",
           "confidence": "medium",
           "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
-        },
-        "partner_disposition": {
-          "status": "accepted_risk",
-          "note": "",
-          "author": "Andrew Zahalski",
-          "updated_at": "2026-11-15T12:16:30+00:00"
         }
       },
       {
@@ -265,12 +211,6 @@
           "action": "fix",
           "confidence": "medium",
           "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
-        },
-        "partner_disposition": {
-          "status": "accepted_risk",
-          "note": "",
-          "author": "Andrew Zahalski",
-          "updated_at": "2026-11-15T12:16:30+00:00"
         }
       },
       {
@@ -292,38 +232,29 @@
           "action": "fix",
           "confidence": "medium",
           "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
-        },
-        "partner_disposition": {
-          "status": "accepted_risk",
-          "note": "",
-          "author": "Andrew Zahalski",
-          "updated_at": "2026-11-15T12:16:30+00:00"
         }
       }
     ],
-    "summary": "Аудит модуля awz.bxorm выполнен по методологии recon+audit. Сканировано 78 файлов детально исследовано 10 ключевых entry-point файлов. Свёртка с прошлым сканом (reviewed.json): подтверждены 9 из 12 прежних находок, 3 исключены — исправлено в текущем коде: 1) add() mass assignment — добавлена in_array/$activeFields валидация (app.php:418-429); 2) saveBase64Image DoS — добавлен 5MB лимит (tools.php:1275-1277); 3) shell_exec — hardcoded benign команды top/free/nproc без переменных пользователя (tools.php:971-973). Добавлено 1 новая находка (Insecure Deserialization в lib/hooks.php:76 и lib/methods.php:101 — defense-in-depth). Итого: 11 уязвимостей. Распределение по severity: high=0, medium=6 (Authentication Bypass impersonation, Reflected XSS admin panel, class_name config leak, iblocks info leak, batch CSRF), low=5 (Stored XSS SVG, token_in_url, CORS reflection, wide file whitelist, 2x Insecure Deserialization serialized fields). riskLevel = medium.",
+    "summary": "Аудит модуля awz.bxorm выполнен по методологии recon+audit. Сканировано 78 файлов. Прочитаны и проверены по чек-листу: lib/api/controller/mcp/tools.php, lib/api/controller/app.php, lib/api/controller/bxmcp.php, lib/api/controller/hook.php, lib/api/filters/appauth.php, lib/api/filters/sign.php, lib/api/filters/nocors.php, lib/adminpages/hooksedit.php, lib/adminpages/methodsedit.php, lib/helper.php, lib/hooks.php, lib/methods.php, options.php. Свёртка с прошлым сканом (reviewed.json): подтверждены 11 из 11 прежних находок, каждая верифицирована по реально прочитанному коду; 3 найденные ранее и исключённые находки (add mass assignment, saveBase64Image DoS, shell_exec command injection) остаются исправленными и НЕ включены в vulnerabilities. Новая находок: 0. Итого: 11 уязвимостей. Распределение по severity: high=0, medium=5 (Authentication Bypass impersonation, Reflected XSS admin panel, class_name config leak, iblocks info leak, batch CSRF), low=6 (Stored XSS SVG, token_in_url, CORS reflection, wide file whitelist, 2x Insecure Deserialization serialized fields). riskLevel = medium.",
     "scannedFiles": 78,
     "riskLevel": "medium",
     "auditedFiles": [
+      "lib/api/controller/mcp/tools.php",
       "lib/api/controller/app.php",
       "lib/api/controller/bxmcp.php",
-      "lib/api/controller/-hook.php",
-      "lib/api/controller/mcp/app.php",
-      "lib/api/controller/mcp/prompts.php",
-      "lib/api/controller/mcp/resources.php",
-      "lib/api/controller/mcp/tools.php",
+      "lib/api/controller/hook.php",
       "lib/api/filters/appauth.php",
       "lib/api/filters/sign.php",
       "lib/api/filters/nocors.php",
       "lib/adminpages/hooksedit.php",
       "lib/adminpages/methodsedit.php",
       "lib/helper.php",
-      "lib/api/scopes/controller.php",
       "lib/hooks.php",
-      "lib/methods.php"
+      "lib/methods.php",
+      "options.php"
     ],
     "reviewSummary": {
-      "reviewedAt": "2026-11-15",
+      "reviewedAt": "2026-11-23",
       "method": "BUS-aware triage: preserve original finding fields except severity, add reviewed node with old severity and rationale.",
       "totals": {
         "vulnerabilities": 11,
@@ -366,10 +297,6 @@
         "Type, file, line, description, recommendation and fix are preserved from the source journal.",
         "Severity is replaced with reviewed triage severity."
       ]
-    },
-    "feedbackSummary": {
-      "updatedAt": "2026-11-15T12:16:30+00:00",
-      "applied": 11
     }
   }
 }

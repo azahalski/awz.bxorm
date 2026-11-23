@@ -5,7 +5,7 @@
   },
   "current_state": {
     "status": "needs_review",
-    "last_run_id": "awz.bxorm-1794755519",
+    "last_run_id": "awz.bxorm-1795437925",
     "archive_sha256": null,
     "open_findings": 0,
     "blocking_findings_open": 0,
@@ -180,6 +180,24 @@
         "still_open_findings": 1,
         "reopened_findings": 0,
         "resolved_since_previous_run": 11
+      }
+    },
+    {
+      "run_id": "awz.bxorm-1795437925",
+      "created_at": "2026-11-23T09:46:53+00:00",
+      "archive_sha256": null,
+      "scanner_request_id": "awz.bxorm-1795437925",
+      "input_summary": "Аудит модуля awz.bxorm выполнен по методологии recon+audit. Сканировано 78 файлов. Прочитаны и проверены по чек-листу: lib/api/controller/mcp/tools.php, lib/api/controller/app.php, lib/api/controller/bxmcp.php, lib/api/controller/hook.php, lib/api/filters/appauth.php, lib/api/filters/sign.php, lib/api/filters/nocors.php, lib/adminpages/hooksedit.php, lib/adminpages/methodsedit.php, lib/helper.php, lib/hooks.php, lib/methods.php, options.php. Свёртка с прошлым сканом (reviewed.json): подтверждены 11 из 11 прежних находок, каждая верифицирована по реально прочитанному коду; 3 найденные ранее и исключённые находки (add mass assignment, saveBase64Image DoS, shell_exec command injection) остаются исправленными и НЕ включены в vulnerabilities. Новая находок: 0. Итого: 11 уязвимостей. Распределение по severity: high=0, medium=5 (Authentication Bypass impersonation, Reflected XSS admin panel, class_name config leak, iblocks info leak, batch CSRF), low=6 (Stored XSS SVG, token_in_url, CORS reflection, wide file whitelist, 2x Insecure Deserialization serialized fields). riskLevel = medium.",
+      "summary": {
+        "current_scan_findings": 11,
+        "severity_counts": {
+          "medium": 5,
+          "low": 6
+        },
+        "new_findings": 0,
+        "still_open_findings": 11,
+        "reopened_findings": 0,
+        "resolved_since_previous_run": 0
       }
     }
   ],
@@ -3288,7 +3306,7 @@
       "severity": "medium",
       "status": "accepted_risk",
       "first_seen_run_id": "awz.bxorm-1794754674",
-      "last_seen_run_id": "awz.bxorm-1794755519",
+      "last_seen_run_id": "awz.bxorm-1795437925",
       "resolved_run_id": null,
       "original_location": {
         "file": "lib/api/controller/mcp/tools.php",
@@ -3353,6 +3371,16 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz.bxorm-1795437925",
+          "event": "detected_again",
+          "at": "2026-11-23T09:46:53+00:00",
+          "location": {
+            "file": "lib/api/controller/mcp/tools.php",
+            "line": "1108"
+          },
+          "status": "accepted_risk"
         }
       ]
     },
@@ -3776,7 +3804,7 @@
       "severity": "medium",
       "status": "accepted_risk",
       "first_seen_run_id": "awz.bxorm-1794755519",
-      "last_seen_run_id": "awz.bxorm-1794755519",
+      "last_seen_run_id": "awz.bxorm-1795437925",
       "resolved_run_id": null,
       "original_location": {
         "file": "lib/api/filters/appauth.php",
@@ -3831,6 +3859,16 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz.bxorm-1795437925",
+          "event": "detected_again",
+          "at": "2026-11-23T09:46:53+00:00",
+          "location": {
+            "file": "lib/api/filters/appauth.php",
+            "line": "95-101"
+          },
+          "status": "accepted_risk"
         }
       ]
     },
@@ -3841,7 +3879,7 @@
       "severity": "medium",
       "status": "accepted_risk",
       "first_seen_run_id": "awz.bxorm-1794755519",
-      "last_seen_run_id": "awz.bxorm-1794755519",
+      "last_seen_run_id": "awz.bxorm-1795437925",
       "resolved_run_id": null,
       "original_location": {
         "file": "lib/adminpages/hooksedit.php",
@@ -3896,6 +3934,16 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz.bxorm-1795437925",
+          "event": "detected_again",
+          "at": "2026-11-23T09:46:53+00:00",
+          "location": {
+            "file": "lib/adminpages/hooksedit.php",
+            "line": "38"
+          },
+          "status": "accepted_risk"
         }
       ]
     },
@@ -3906,7 +3954,7 @@
       "severity": "medium",
       "status": "accepted_risk",
       "first_seen_run_id": "awz.bxorm-1794755519",
-      "last_seen_run_id": "awz.bxorm-1794755519",
+      "last_seen_run_id": "awz.bxorm-1795437925",
       "resolved_run_id": null,
       "original_location": {
         "file": "lib/api/controller/mcp/tools.php",
@@ -3961,6 +4009,16 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz.bxorm-1795437925",
+          "event": "detected_again",
+          "at": "2026-11-23T09:46:53+00:00",
+          "location": {
+            "file": "lib/api/controller/mcp/tools.php",
+            "line": "640-646"
+          },
+          "status": "accepted_risk"
         }
       ]
     },
@@ -3971,7 +4029,7 @@
       "severity": "medium",
       "status": "accepted_risk",
       "first_seen_run_id": "awz.bxorm-1794755519",
-      "last_seen_run_id": "awz.bxorm-1794755519",
+      "last_seen_run_id": "awz.bxorm-1795437925",
       "resolved_run_id": null,
       "original_location": {
         "file": "lib/api/controller/app.php",
@@ -4026,6 +4084,16 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz.bxorm-1795437925",
+          "event": "detected_again",
+          "at": "2026-11-23T09:46:53+00:00",
+          "location": {
+            "file": "lib/api/controller/app.php",
+            "line": "56-65"
+          },
+          "status": "accepted_risk"
         }
       ]
     },
@@ -4036,7 +4104,7 @@
       "severity": "low",
       "status": "accepted_risk",
       "first_seen_run_id": "awz.bxorm-1794755519",
-      "last_seen_run_id": "awz.bxorm-1794755519",
+      "last_seen_run_id": "awz.bxorm-1795437925",
       "resolved_run_id": null,
       "original_location": {
         "file": "lib/api/controller/mcp/tools.php",
@@ -4091,6 +4159,16 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz.bxorm-1795437925",
+          "event": "detected_again",
+          "at": "2026-11-23T09:46:53+00:00",
+          "location": {
+            "file": "lib/api/controller/mcp/tools.php",
+            "line": "1091"
+          },
+          "status": "accepted_risk"
         }
       ]
     },
@@ -4101,7 +4179,7 @@
       "severity": "low",
       "status": "accepted_risk",
       "first_seen_run_id": "awz.bxorm-1794755519",
-      "last_seen_run_id": "awz.bxorm-1794755519",
+      "last_seen_run_id": "awz.bxorm-1795437925",
       "resolved_run_id": null,
       "original_location": {
         "file": "lib/helper.php",
@@ -4156,6 +4234,16 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz.bxorm-1795437925",
+          "event": "detected_again",
+          "at": "2026-11-23T09:46:53+00:00",
+          "location": {
+            "file": "lib/helper.php",
+            "line": "179"
+          },
+          "status": "accepted_risk"
         }
       ]
     },
@@ -4166,7 +4254,7 @@
       "severity": "low",
       "status": "accepted_risk",
       "first_seen_run_id": "awz.bxorm-1794755519",
-      "last_seen_run_id": "awz.bxorm-1794755519",
+      "last_seen_run_id": "awz.bxorm-1795437925",
       "resolved_run_id": null,
       "original_location": {
         "file": "lib/api/filters/nocors.php",
@@ -4221,6 +4309,16 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz.bxorm-1795437925",
+          "event": "detected_again",
+          "at": "2026-11-23T09:46:53+00:00",
+          "location": {
+            "file": "lib/api/filters/nocors.php",
+            "line": "34-40"
+          },
+          "status": "accepted_risk"
         }
       ]
     },
@@ -4231,7 +4329,7 @@
       "severity": "low",
       "status": "accepted_risk",
       "first_seen_run_id": "awz.bxorm-1794755519",
-      "last_seen_run_id": "awz.bxorm-1794755519",
+      "last_seen_run_id": "awz.bxorm-1795437925",
       "resolved_run_id": null,
       "original_location": {
         "file": "lib/api/controller/mcp/tools.php",
@@ -4286,6 +4384,16 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz.bxorm-1795437925",
+          "event": "detected_again",
+          "at": "2026-11-23T09:46:53+00:00",
+          "location": {
+            "file": "lib/api/controller/mcp/tools.php",
+            "line": "769-772"
+          },
+          "status": "accepted_risk"
         }
       ]
     },
@@ -4296,7 +4404,7 @@
       "severity": "low",
       "status": "accepted_risk",
       "first_seen_run_id": "awz.bxorm-1794755519",
-      "last_seen_run_id": "awz.bxorm-1794755519",
+      "last_seen_run_id": "awz.bxorm-1795437925",
       "resolved_run_id": null,
       "original_location": {
         "file": "lib/hooks.php",
@@ -4351,6 +4459,16 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz.bxorm-1795437925",
+          "event": "detected_again",
+          "at": "2026-11-23T09:46:53+00:00",
+          "location": {
+            "file": "lib/hooks.php",
+            "line": "76"
+          },
+          "status": "accepted_risk"
         }
       ]
     },
@@ -4361,7 +4479,7 @@
       "severity": "low",
       "status": "accepted_risk",
       "first_seen_run_id": "awz.bxorm-1794755519",
-      "last_seen_run_id": "awz.bxorm-1794755519",
+      "last_seen_run_id": "awz.bxorm-1795437925",
       "resolved_run_id": null,
       "original_location": {
         "file": "lib/methods.php",
@@ -4416,6 +4534,16 @@
           "status": "accepted_risk",
           "note": "",
           "author": "Andrew Zahalski"
+        },
+        {
+          "run_id": "awz.bxorm-1795437925",
+          "event": "detected_again",
+          "at": "2026-11-23T09:46:53+00:00",
+          "location": {
+            "file": "lib/methods.php",
+            "line": "101"
+          },
+          "status": "accepted_risk"
         }
       ]
     }

@@ -1,0 +1,160 @@
+[center][size=18pt][b]AWZ: MCP, ORM API, Вебхуки[/b][/size][/center]
+[center][IMG WIDTH=225 HEIGHT=9]https://zahalski.dev/upload/awz.load.ai/al2f3dvs3c.png[/IMG][/center]
+
+[center]
+[TABLE][TR][TH][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][IMG WIDTH=150 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/063q9zde4t.png[/IMG][/TH][TH][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG]Модуль открывает сайт по HTTP API:
+любая ORM-сущность или контроллер ядра Битрикс превращается в JSON-метод, а всё управление API - из админ-панели, без кода.[/TH][TH][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][IMG WIDTH=150 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/063q9zde4t.png[/IMG][/TH][/TR]
+[TR][TH][IMG WIDTH=10 HEIGHT=20]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TH][/TR]
+[TR][TH][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][IMG WIDTH=150 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/063q9zde4t.png[/IMG][/TH][TH][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG]Главная фишка - MCP-сервер для ИИ:
+[color=#8b93b3]одна кнопка «Создать MCP» готовит приложение с URL и токеном - Claude и другие MCP-клиенты подключаются к сайту без единой строки кода.[/color][/TH][TH][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][IMG WIDTH=150 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/063q9zde4t.png[/IMG][/TH][/TR]
+[TR][TH][IMG WIDTH=10 HEIGHT=20]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TH][/TR]
+[TR][TH][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][IMG WIDTH=150 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/063q9zde4t.png[/IMG][/TH][TH][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG]Безопасность точечная:
+[color=#8b93b3]свой токен на каждый веб-хук, методы выбираются флажками, чтение файлов ограничено белым списком каталогов.[/color][/TH][TH][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][IMG WIDTH=150 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/063q9zde4t.png[/IMG][/TH][/TR][/TABLE]
+[/center]
+
+[center][IMG WIDTH=800 HEIGHT=447]https://zahalski.dev/upload/awz.load.ai/li2d0aylcq.png[/IMG][/center]
+
+[center][IMG WIDTH=10 HEIGHT=20]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/center]
+
+[center][size=18pt][b]Преимущества модуля[/b][/size][/center]
+[center][IMG WIDTH=225 HEIGHT=9]https://zahalski.dev/upload/awz.load.ai/al2f3dvs3c.png[/IMG][/center]
+
+[center]
+[TABLE]
+[TR][TH][center][IMG WIDTH=72 HEIGHT=72]https://zahalski.dev/upload/awz.load.ai/3132qajs87.png[/IMG][/center]
+[center][b]MCP-сервер для ИИ[/b][/center]
+[color=#8b93b3]Протокол JSON-RPC 2.0:
+initialize, tools/list, tools/call, ресурсы и промпты - ИИ-клиенты подключаются к сайту без кода.[/color][/TH][TH][IMG WIDTH=10 HEIGHT=20]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TH][TH][center][IMG WIDTH=72 HEIGHT=72]https://zahalski.dev/upload/awz.load.ai/el3cvlpyuo.png[/IMG][/center]
+[center][b]Любая ORM-сущность[/b][/center]
+[color=#8b93b3]list, add, update, delete, get, fields и групповые действия для любой таблицы - с настройкой полей прямо в админке.[/color][/TH][/TR]
+[TR][TH][IMG WIDTH=10 HEIGHT=20]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TH][TH][IMG WIDTH=10 HEIGHT=20]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TH][TH][IMG WIDTH=10 HEIGHT=20]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TH][/TR]
+[TR][TH][center][IMG WIDTH=72 HEIGHT=72]https://zahalski.dev/upload/awz.load.ai/p4og3170tk.png[/IMG][/center]
+[center][b]Инструменты для ИИ[/b][/center]
+[color=#8b93b3]Информация о CMS, PHP и БД, нагрузка сервера, управление логом, чтение файлов, инфоблоки, загрузка изображений.[/color][/TH][TH][IMG WIDTH=10 HEIGHT=20]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TH][TH][center][IMG WIDTH=72 HEIGHT=72]https://zahalski.dev/upload/awz.load.ai/g6un6c0r2j.png[/IMG][/center]
+[center][b]Безопасность[/b][/center]
+[color=#8b93b3]Токен на каждый хук, методы по флажкам, белый список каталогов и запрет служебных файлов.[/color][/TH][/TR]
+[/TABLE]
+[/center]
+
+[center][IMG WIDTH=10 HEIGHT=20]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/center]
+
+[center][size=18pt][b]Что открывает API[/b][/size][/center]
+[center][IMG WIDTH=225 HEIGHT=9]https://zahalski.dev/upload/awz.load.ai/al2f3dvs3c.png[/IMG][/center]
+
+[center]
+[TABLE][TR][TH][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][IMG WIDTH=150 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/063q9zde4t.png[/IMG][/TH][TH]Метод создаётся на форме «Параметры метода API»:
+[color=#8b93b3]выбираете сущность или контроллер ядра, отмечаете доступные методы флажками и включаете активность.[/color][/TH][TH][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][IMG WIDTH=150 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/063q9zde4t.png[/IMG][/TH][/TR][/TABLE]
+[/center]
+
+[center][IMG WIDTH=800 HEIGHT=447]https://zahalski.dev/upload/awz.load.ai/vuk88bub6j.png[/IMG][/center]
+
+[TABLE]
+[TR][TD][IMG WIDTH=44 HEIGHT=44]https://zahalski.dev/upload/awz.load.ai/62gyu3eqdh.png[/IMG][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD][b]ORM-сущности[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]Символьный код или класс таблицы (например PvzTable):
+методы list, add, update, delete, get, fields и групповые действия.[/TD][/TR]
+[TR][TD][IMG WIDTH=44 HEIGHT=44]https://zahalski.dev/upload/awz.load.ai/0w1svrcyn9.png[/IMG][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD][b]Контроллеры ядра[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]Класс контроллера (например Basket):
+методы ядра - getfields, get, getcurrency и другие.[/TD][/TR]
+[TR][TD][IMG WIDTH=44 HEIGHT=44]https://zahalski.dev/upload/awz.load.ai/etufitfnlv.png[/IMG][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD][b]Настройка полей[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]Типы IntegerField, StringField и другие; primary, read-only, required, sortable - всё задаётся на форме метода.[/TD][/TR]
+[TR][TD][IMG WIDTH=44 HEIGHT=44]https://zahalski.dev/upload/awz.load.ai/cjvigfp4k7.png[/IMG][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD][b]Нестабильные API[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]API контроллеров ядра может быть нестабильным - модуль рекомендует собственные контроллеры Awz\\BxOrm\\ApiScopes\\Controller.[/TD][/TR]
+[TR][TD][IMG WIDTH=44 HEIGHT=44]https://zahalski.dev/upload/awz.load.ai/vqof14q315.png[/IMG][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD][b]Активность метода[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]Метод выключается флажком без удаления настройки - удобно на время доработок и миграций.[/TD][/TR]
+[/TABLE]
+
+[center][IMG WIDTH=10 HEIGHT=20]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/center]
+
+[center][size=18pt][b]MCP-сервер для ИИ[/b][/size][/center]
+[center][IMG WIDTH=225 HEIGHT=9]https://zahalski.dev/upload/awz.load.ai/al2f3dvs3c.png[/IMG][/center]
+
+[center]
+[TABLE][TR][TH][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][IMG WIDTH=150 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/063q9zde4t.png[/IMG][/TH][TH]Одна кнопка в настройках модуля - и сайт готов к подключению ИИ-клиента по протоколу MCP.[/TH][TH][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][IMG WIDTH=150 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/063q9zde4t.png[/IMG][/TH][/TR][/TABLE]
+[/center]
+
+[center][IMG WIDTH=800 HEIGHT=447]https://zahalski.dev/upload/awz.load.ai/e1z7ofcsgm.png[/IMG][/center]
+
+[TABLE]
+[TR][TD][IMG WIDTH=44 HEIGHT=44]https://zahalski.dev/upload/awz.load.ai/14v8gtlinq.png[/IMG][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD][b]Создать MCP[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]Кнопка создаёт метод и веб-хук с токеном, URL и ключ готовятся автоматически; повторное нажатие обновляет приложение.[/TD][/TR]
+[TR][TD][IMG WIDTH=44 HEIGHT=44]https://zahalski.dev/upload/awz.load.ai/p8mvrfg04w.png[/IMG][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD][b]Протокол MCP[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]JSON-RPC 2.0:
+ping, транспорт, список и вызов инструментов, ресурсы и промпты.[/TD][/TR]
+[TR][TD][IMG WIDTH=44 HEIGHT=44]https://zahalski.dev/upload/awz.load.ai/h4ejkpxu9l.png[/IMG][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD][b]Версии MCP[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]Версия сервера и версия протокола - в настройках; пустое значение берёт версию из кода.[/TD][/TR]
+[/TABLE]
+
+[center][IMG WIDTH=10 HEIGHT=20]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/center]
+
+[center][size=18pt][b]Методы MCP-сервера[/b][/size][/center]
+[center][IMG WIDTH=225 HEIGHT=9]https://zahalski.dev/upload/awz.load.ai/al2f3dvs3c.png[/IMG][/center]
+
+[TABLE]
+[TR][TD][b]Протокол MCP[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]initialize, ping, tools/list, tools/call, resources/list, resources/read, prompts/list, prompts/get - ping и полный транспорт JSON-RPC 2.0.[/TD][/TR]
+[TR][TD][b]dbinfo[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]Тип и версия СУБД, хост, имя базы данных.[/TD][/TR]
+[TR][TD][b]envinfo[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]Информация об окружении сайта.[/TD][/TR]
+[TR][TD][b]phpinfo[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]Версия PHP, загруженные расширения, memory_limit, max_execution_time.[/TD][/TR]
+[TR][TD][b]cmsinfo[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]Версия CMS, редакция, список установленных модулей.[/TD][/TR]
+[TR][TD][b]processinfo[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]Нагрузка сервера: top, free, nproc; при недоступном shell - load average, ядра и память.[/TD][/TR]
+[TR][TD][b]log_set[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]Включает и настраивает лог: файл, размер до ротации (1-512 МБ), уровень, тип, доп. параметры.[/TD][/TR]
+[TR][TD][b]log_get[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]Последние N строк лог-файла Битрикса: стандартный лог или файл PSR-логгера.[/TD][/TR]
+[TR][TD][b]log_clear[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]Усекает (ротирует) лог-файл; настройки логирования сохраняются.[/TD][/TR]
+[TR][TD][b]log_off[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]Полностью отключает системное логирование и debug.[/TD][/TR]
+[TR][TD][b]file_get[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]Чтение файла целиком или выбранных строк («10», «10-25», «1,5,9-12»); белый список каталогов, служебные файлы запрещены.[/TD][/TR]
+[TR][TD][b]iblocks[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]Список инфоблоков: ID, название, код, тип, активность, количество элементов; поиск по названию и типу.[/TD][/TR]
+[TR][TD][b]sections[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]Активные разделы инфоблока деревом: ID, NAME, CODE, SECTION_PAGE_URL, DEPTH_LEVEL.[/TD][/TR]
+[TR][TD][b]loadphoto[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]Постоянное изображение из base64 в /upload/awz.load.ai/ и публичный URL; png, jpg, jpeg, webp, svg, gif.[/TD][/TR]
+[TR][TD][b]tmpphoto[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]Временное изображение из base64 в /upload/awz.gen.tmp/ для превью; файлы старше часа удаляются автоматически.[/TD][/TR]
+[TR][TD][b]onBuildMcpTools[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]Событие для добавления собственных инструментов MCP без правки кода модуля.[/TD][/TR]
+[/TABLE]
+
+[center][IMG WIDTH=10 HEIGHT=20]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/center]
+
+[center][size=18pt][b]Форматы вызовов[/b][/size][/center]
+[center][IMG WIDTH=225 HEIGHT=9]https://zahalski.dev/upload/awz.load.ai/al2f3dvs3c.png[/IMG][/center]
+
+[center]
+[TABLE][TR][TH][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][IMG WIDTH=150 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/063q9zde4t.png[/IMG][/TH][TH]Адрес API - обычный вход в /bitrix/services/main/ajax.php:
+[color=#8b93b3]формат вызова различается только назначением.[/color][/TH][TH][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][IMG WIDTH=150 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/063q9zde4t.png[/IMG][/TH][/TR][/TABLE]
+[/center]
+
+[center][IMG WIDTH=800 HEIGHT=447]https://zahalski.dev/upload/awz.load.ai/6hgzrlvam0.png[/IMG][/center]
+
+[TABLE]
+[TR][TD][IMG WIDTH=44 HEIGHT=44]https://zahalski.dev/upload/awz.load.ai/0tvypf6ddd.png[/IMG][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD][b]Метод по хуку[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]awz:bxorm.api.app.call&app=ID&method=КОД.МЕТОД - прямой вызов метода; токен хука передаётся в URL или в заголовке Authorization.[/TD][/TR]
+[TR][TD][IMG WIDTH=44 HEIGHT=44]https://zahalski.dev/upload/awz.load.ai/2u4f26y9vv.png[/IMG][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD][b]ORM-параметры[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]awz:bxorm.api.hook.call - те же вызовы с параметрами order, select, filter, start, id, fields.[/TD][/TR]
+[TR][TD][IMG WIDTH=44 HEIGHT=44]https://zahalski.dev/upload/awz.load.ai/wvdp928jr0.png[/IMG][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD][b]MCP-сервер[/b][/TD][TD][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/TD][TD]awz:bxorm.api.bxmcp.callrpc&app=ID&mcprpc=2.0 - транспорт JSON-RPC 2.0 для ИИ-клиентов.[/TD][/TR]
+[/TABLE]
+
+[center][IMG WIDTH=10 HEIGHT=20]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/center]
+
+[center][size=18pt][b]Кому подойдёт[/b][/size][/center]
+[center][IMG WIDTH=225 HEIGHT=9]https://zahalski.dev/upload/awz.load.ai/al2f3dvs3c.png[/IMG][/center]
+
+[center]
+[TABLE][TR][TH][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][IMG WIDTH=150 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/063q9zde4t.png[/IMG][/TH][TH]ИИ-подключение к сайту, свой REST API для мобильных приложений, интеграционные сценарии с токенами:
+[color=#8b93b3]модуль превращает сайт на Битриксе в API-платформу - любая ORM-сущность или контроллер ядра становится JSON-методом, а MCP-сервер, методы и веб-хуки управляются из админ-панели без кода.[/color][/TH][TH][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][IMG WIDTH=150 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/063q9zde4t.png[/IMG][/TH][/TR][/TABLE]
+[/center]
+
+[center][IMG WIDTH=10 HEIGHT=20]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/center]
+
+[center][size=18pt][b]Расширение под проект[/b][/size][/center]
+[center][IMG WIDTH=225 HEIGHT=9]https://zahalski.dev/upload/awz.load.ai/al2f3dvs3c.png[/IMG][/center]
+
+[center]
+[TABLE][TR][TH][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][IMG WIDTH=150 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/063q9zde4t.png[/IMG][/TH][TH]Событие onBeforeHookCallAction позволяет изменить логику обработки action в контроллере - до обращения к сущности.[/TH][TH][IMG WIDTH=10 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][IMG WIDTH=150 HEIGHT=10]https://zahalski.dev/upload/awz.load.ai/063q9zde4t.png[/IMG][/TH][/TR][/TABLE]
+[/center]
+
+[b]Что можно сделать:[/b]
+[LIST][*]изменить данные события в объекте Awz\\BxOrm\\Api\\BinderResult - идентификатор, поля, фильтры;[*]добавить свою ошибку валидации в BinderResult - вызов не дойдёт до сущности;[*]вернуть свои данные вместо обращения к базе - заглушки и мок-ответы для интеграций.[/LIST]
+
+[b]Пример обработчика:[/b]
+[code]// event handler: /bitrix/php_interface/init.php
+$eventManager->addEventHandler(\\'awz.bxorm\\', \\'onBeforeHookCallAction\\',
+    function(\\Bitrix\\Main\\Event $event) {
+        /** @var \\Awz\\BxOrm\\Api\\BinderResult $binder **/
+        $binder = $event->getParameter(\\'binder\\');
+        // подмена данных вместо обращения к базе
+        if ($binder->getMethod() === \\'list\\') {
+            $binder->setResult([\\'items\\' => [], \\'total\\' => 0]);
+        }
+    }
+);[/code]
+
+[center][IMG WIDTH=10 HEIGHT=20]https://zahalski.dev/upload/awz.load.ai/36zngfl320.png[/IMG][/center]
+
+Модуль не трогает ядро: методы и хуки живут в своих таблицах, API включается и выключается флажками.
+
+Установили модуль, создали метод, добавили веб-хук - сайт готов отвечать по API и работать с ИИ-клиентом.

@@ -1,6 +1,6 @@
 {
   "success": true,
-  "requestId": "awz.bxorm-1794755519",
+  "requestId": "awz.bxorm-1795437925",
   "data": {
     "vulnerabilities": [
       {
@@ -103,26 +103,23 @@
         "fix": "Before:\n'fetch_data_modification' => function(){\n    return [\n        function ($value) {\n            return unserialize($value, [\"allowed_classes\" => false]);\n        }\n    ];\n},\n\nAfter:\n'fetch_data_modification' => function(){\n    return [\n        function ($value) {\n            $decoded = json_decode($value, true);\n            return is_array($decoded) ? $decoded : [];\n        }\n    ];\n},"
       }
     ],
-    "summary": "Аудит модуля awz.bxorm выполнен по методологии recon+audit. Сканировано 78 файлов детально исследовано 10 ключевых entry-point файлов. Свёртка с прошлым сканом (reviewed.json): подтверждены 9 из 12 прежних находок, 3 исключены — исправлено в текущем коде: 1) add() mass assignment — добавлена in_array/$activeFields валидация (app.php:418-429); 2) saveBase64Image DoS — добавлен 5MB лимит (tools.php:1275-1277); 3) shell_exec — hardcoded benign команды top/free/nproc без переменных пользователя (tools.php:971-973). Добавлено 1 новая находка (Insecure Deserialization в lib/hooks.php:76 и lib/methods.php:101 — defense-in-depth). Итого: 11 уязвимостей. Распределение по severity: high=0, medium=6 (Authentication Bypass impersonation, Reflected XSS admin panel, class_name config leak, iblocks info leak, batch CSRF), low=5 (Stored XSS SVG, token_in_url, CORS reflection, wide file whitelist, 2x Insecure Deserialization serialized fields). riskLevel = medium.",
+    "summary": "Аудит модуля awz.bxorm выполнен по методологии recon+audit. Сканировано 78 файлов. Прочитаны и проверены по чек-листу: lib/api/controller/mcp/tools.php, lib/api/controller/app.php, lib/api/controller/bxmcp.php, lib/api/controller/hook.php, lib/api/filters/appauth.php, lib/api/filters/sign.php, lib/api/filters/nocors.php, lib/adminpages/hooksedit.php, lib/adminpages/methodsedit.php, lib/helper.php, lib/hooks.php, lib/methods.php, options.php. Свёртка с прошлым сканом (reviewed.json): подтверждены 11 из 11 прежних находок, каждая верифицирована по реально прочитанному коду; 3 найденные ранее и исключённые находки (add mass assignment, saveBase64Image DoS, shell_exec command injection) остаются исправленными и НЕ включены в vulnerabilities. Новая находок: 0. Итого: 11 уязвимостей. Распределение по severity: high=0, medium=5 (Authentication Bypass impersonation, Reflected XSS admin panel, class_name config leak, iblocks info leak, batch CSRF), low=6 (Stored XSS SVG, token_in_url, CORS reflection, wide file whitelist, 2x Insecure Deserialization serialized fields). riskLevel = medium.",
     "scannedFiles": 78,
     "riskLevel": "medium",
     "auditedFiles": [
+      "lib/api/controller/mcp/tools.php",
       "lib/api/controller/app.php",
       "lib/api/controller/bxmcp.php",
-      "lib/api/controller/-hook.php",
-      "lib/api/controller/mcp/app.php",
-      "lib/api/controller/mcp/prompts.php",
-      "lib/api/controller/mcp/resources.php",
-      "lib/api/controller/mcp/tools.php",
+      "lib/api/controller/hook.php",
       "lib/api/filters/appauth.php",
       "lib/api/filters/sign.php",
       "lib/api/filters/nocors.php",
       "lib/adminpages/hooksedit.php",
       "lib/adminpages/methodsedit.php",
       "lib/helper.php",
-      "lib/api/scopes/controller.php",
       "lib/hooks.php",
-      "lib/methods.php"
+      "lib/methods.php",
+      "options.php"
     ]
   }
 }
