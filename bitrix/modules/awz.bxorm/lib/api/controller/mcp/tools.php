@@ -1844,6 +1844,246 @@ class Tools extends App
         }
     }
 
+    /**
+     * Сборка полей раздела (addsection/updatesection).
+     * fields — доп. поля JSON-строкой или массивом (UF_<КОД> и прочие).
+     * Возвращает [fields, error].
+     */
+    private function buildSectionFields($iblock_id, string $name, string $description,
+        $parent_id, string $code, string $active, $picture, $fields, bool $forUpdate): array
+    {
+        $iblockId = (int)$iblock_id;
+        if($iblockId <= 0){
+            return [[], 'не указан идентификатор инфоблока (параметр iblock_id)'];
+        }
+
+        $arFields = ['IBLOCK_ID' => $iblockId];
+        if(trim($name) !== ''){
+            $arFields['NAME'] = trim($name);
+        }
+        if(trim($description) !== ''){
+            $arFields['DESCRIPTION'] = $description;
+            $arFields['DESCRIPTION_TYPE'] = preg_match('/<[^>]+>/', $description) ? 'html' : 'text';
+        }
+        //parent_id — строка: пустая = не менять, '0' — перенести в корень, 'N' — родитель
+        $parentId = trim((string)$parent_id);
+        if($parentId !== ''){
+            $arFields['IBLOCK_SECTION_ID'] = (int)$parentId;
+        }elseif(!$forUpdate){
+            $arFields['IBLOCK_SECTION_ID'] = 0;
+        }
+        $code = trim($code);
+        if($code !== ''){
+            $arFields['CODE'] = $code;
+        }
+        $active = strtoupper(trim($active));
+        if($active === 'Y' || $active === 'N'){
+            $arFields['ACTIVE'] = $active;
+        }elseif(!$forUpdate){
+            $arFields['ACTIVE'] = 'Y';
+        }
+        $photo = $this->preparePhotoValue($picture);
+        if($photo !== null){
+            $arFields['PICTURE'] = $photo;
+        }
+
+        if(is_string($fields) && trim($fields) !== ''){
+            $decoded = json_decode($fields, true);
+            if(!is_array($decoded)){
+                return [[], 'некорректный JSON в параметре fields (ожидается объект вида {"UF_CODE":"value"})'];
+            }
+            $fields = $decoded;
+        }
+        if(is_array($fields)){
+            foreach($fields as $key=>$val){
+                $key = strtoupper((string)$key);
+                if($key === '' || in_array($key, ['IBLOCK_ID', 'ID', 'NAME', 'DESCRIPTION', 'DESCRIPTION_TYPE',
+                    'IBLOCK_SECTION_ID', 'CODE', 'ACTIVE', 'PICTURE', 'SORT', 'GLOBAL_ACTIVE',
+                    'DEPTH_LEVEL', 'LEFT_MARGIN', 'RIGHT_MARGIN', 'TIMESTAMP_X', 'MODIFIED_BY'], true)){
+                    continue;
+                }
+                $arFields[$key] = $val;
+            }
+        }
+
+        return [$arFields, ''];
+    }
+
+    /**
+     * Генерирует уникальный символьный код на основе названия раздела
+     * в пределах инфоблока. Если код занят, добавляет суффикс (-2, -3, ...).
+     */
+    private function generateUniqueSectionCode(int $iblockId, string $name): string
+    {
+        $base = \CUtil::translit($name, 'ru', [
+            'replace_space' => '-',
+            'replace_other' => '-',
+        ]);
+        $base = trim($base, '-');
+        if($base === ''){
+            $base = 'section';
+        }
+
+        try{
+            $code = $base;
+            $suffix = 2;
+            while(
+                \Bitrix\Iblock\SectionTable::getRow([
+                    'select' => ['ID'],
+                    'filter' => ['=IBLOCK_ID' => $iblockId, '=CODE' => $code],
+                    'limit' => 1,
+                ])
+            ){
+                $code = $base.'-'.$suffix;
+                $suffix++;
+            }
+            return $code;
+        }catch(\Throwable $e){
+            return $base.'-'.substr((string)time(), -6);
+        }
+    }
+
+    /**
+     * Добавляет раздел инфоблока: инфоблок, название, описание, родительский раздел,
+     * символьный код, активность (по умолчанию Y), картинка (путь/URL),
+     * доп. поля в fields (JSON, в т.ч. UF_<КОД>).
+     */
+    public function addsectionAction($iblock_id, string $name = '', string $description = '',
+        $parent_id = 0, string $code = '', string $active = 'Y', $picture = '', $fields = [])
+    {
+        try{
+            if(!Loader::includeModule('iblock')){
+                return ['content'=>[['type'=>'text','text'=>'Модуль iblock не установлен']], 'isError'=>true];
+            }
+            [$arFields, $error] = $this->buildSectionFields($iblock_id, $name, $description,
+                $parent_id, $code, $active, $picture, $fields, false);
+            if($error !== ''){
+                return ['content'=>[['type'=>'text','text'=>$error]], 'isError'=>true];
+            }
+            if(trim($arFields['NAME'] ?? '') === ''){
+                return ['content'=>[['type'=>'text','text'=>'не указано название раздела (параметр name)']], 'isError'=>true];
+            }
+            //символьный код: если не передан — генерируется
+            //уникальный в пределах инфоблока из названия
+            $arFields['CODE'] = (string)($arFields['CODE'] ?? '');
+            if(trim($arFields['CODE']) === ''){
+                $arFields['CODE'] = $this->generateUniqueSectionCode((int)$iblock_id, (string)$arFields['NAME']);
+            }
+
+            $bs = new \CIBlockSection();
+            $newId = $bs->Add($arFields);
+            if(!$newId){
+                return ['content'=>[['type'=>'text','text'=>'Ошибка добавления раздела: '.$bs->LAST_ERROR]], 'isError'=>true];
+            }
+
+            return ['content'=>[['type'=>'text','text'=>'Раздел добавлен: ID='.(int)$newId.' (IBLOCK_ID='.(int)$iblock_id.')']]];
+        }catch(\Throwable $e){
+            return ['content'=>[['type'=>'text','text'=>'tool addsection error: '.$e->getMessage()]], 'isError'=>true];
+        }
+    }
+
+    /**
+     * Изменяет раздел инфоблока: название, описание, родительский раздел,
+     * символьный код, активность, картинка (путь/URL; 'false'/'del' — удалить),
+     * доп. поля в fields (JSON, в т.ч. UF_<КОД>).
+     * Пустые параметры не перезаписывают текущие значения.
+     */
+    public function updatesectionAction(string $id, string $name = '', string $description = '',
+        string $parent_id = '', string $code = '', string $active = '', $picture = '', $fields = [])
+    {
+        try{
+            if(!Loader::includeModule('iblock')){
+                return ['content'=>[['type'=>'text','text'=>'Модуль iblock не установлен']], 'isError'=>true];
+            }
+            $sectionId = (int)$id;
+            if(!$sectionId){
+                return ['content'=>[['type'=>'text','text'=>'не указан идентификатор раздела (параметр id)']], 'isError'=>true];
+            }
+            try{
+                $section = \Bitrix\Iblock\SectionTable::getRowById($sectionId);
+            }catch(\Throwable $e){
+                $section = null;
+            }
+            if(!$section){
+                return ['content'=>[['type'=>'text','text'=>'Раздел не найден: '.$sectionId]], 'isError'=>true];
+            }
+            [$arFields, $error] = $this->buildSectionFields($section['IBLOCK_ID'], $name, $description,
+                $parent_id, $code, $active, $picture, $fields, true);
+            if($error !== ''){
+                return ['content'=>[['type'=>'text','text'=>$error]], 'isError'=>true];
+            }
+            unset($arFields['IBLOCK_ID']);
+            if(empty($arFields)){
+                return ['content'=>[['type'=>'text','text'=>'Нет данных для обновления (все параметры пусты)']], 'isError'=>true];
+            }
+
+            $bs = new \CIBlockSection();
+            if(!$bs->Update($sectionId, $arFields)){
+                return ['content'=>[['type'=>'text','text'=>'Ошибка обновления раздела: '.$bs->LAST_ERROR]], 'isError'=>true];
+            }
+
+            return ['content'=>[['type'=>'text','text'=>'Раздел #'.$sectionId.' обновлен: '.implode(', ', array_keys($arFields))]]];
+        }catch(\Throwable $e){
+            return ['content'=>[['type'=>'text','text'=>'tool updatesection error: '.$e->getMessage()]], 'isError'=>true];
+        }
+    }
+
+    /**
+     * Возвращает данные раздела инфоблока по ID или фильтру (JSON):
+     * все поля + значения UF_* (свойства раздела).
+     */
+    public function getsectionAction(string $id = '', string $filter = '', int $limit = 1)
+    {
+        try{
+            if(!Loader::includeModule('iblock')){
+                return ['content'=>[['type'=>'text','text'=>'Модуль iblock не установлен']], 'isError'=>true];
+            }
+            $limit = max(1, min(100, (int)$limit));
+            $arFilter = [];
+            $filter = trim($filter);
+            if($filter !== ''){
+                $decoded = json_decode($filter, true);
+                if(!is_array($decoded)){
+                    return ['content'=>[['type'=>'text','text'=>'некорректный JSON в параметре filter (ожидается объект вида {"CODE":"value"})']], 'isError'=>true];
+                }
+                foreach($decoded as $key=>$val){
+                    $arFilter[(string)$key] = $val;
+                }
+            }
+            $id = trim($id);
+            if($id !== ''){
+                $arFilter['=ID'] = (int)$id;
+            }
+            if(empty($arFilter)){
+                return ['content'=>[['type'=>'text','text'=>'укажите id раздела или filter (JSON)']], 'isError'=>true];
+            }
+
+            $rows = [];
+            try{
+                $res = \Bitrix\Iblock\SectionTable::getList([
+                    'select' => ['*', 'UF_*'],
+                    'filter' => $arFilter,
+                    'limit' => $limit,
+                    'order' => ['ID' => 'ASC'],
+                ]);
+                $rows = $res->fetchAll();
+            }catch(\Throwable $e){
+                return ['content'=>[['type'=>'text','text'=>'Ошибка запроса разделов: '.$e->getMessage()]], 'isError'=>true];
+            }
+
+            if(empty($rows)){
+                return ['content'=>[['type'=>'text','text'=>'Раздел не найден (id="'.$id.'", filter='.$filter.')']], 'isError'=>true];
+            }
+
+            $text = ($limit > 1) ? json_encode($rows, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)
+                : json_encode($rows[0], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+
+            return ['content'=>[['type'=>'text','text'=>$text]]];
+        }catch(\Throwable $e){
+            return ['content'=>[['type'=>'text','text'=>'tool getsection error: '.$e->getMessage()]], 'isError'=>true];
+        }
+    }
+
     public function listAction(int $app, $json = []){
 
         $mcpData = \Awz\BxOrm\HooksTable::getRowById($this->getRequest()->get('app'));
@@ -1871,6 +2111,9 @@ class Tools extends App
             'additem' => 'Добавляет элемент инфоблока. Параметры: iblock_id (обязателен), name (название, обязателен), description (детальное описание, html определяется автоматически), section_id (ID раздела), preview_picture / detail_picture (путь или URL картинки), active (Y по умолчанию / N), fields — доп. поля JSON-строкой (в т.ч. PROPERTY_<КОД> для свойств, PREVIEW_TEXT, CODE и др.). Символьный код (CODE) если не передан — генерируется автоматически, уникальный в пределах инфоблока. После изменения вызывай reindexitem.',
             'updateitemfields' => 'Изменяет элемент инфоблока. Параметры: id (обязателен), name, description, section_id, preview_picture / detail_picture (путь или URL; "false"/"del" — удалить файл), active (меняется только при явной передаче Y/N), fields — доп. поля JSON-строкой (в т.ч. PROPERTY_<КОД>). Пустые параметры не перезаписывают текущие значения. После изменения вызывай reindexitem.',
             'updateseosect' => 'Устанавливает мета-теги раздела инфоблока: page_title (H1 страницы), seo_title (title), seo_descr (description). Пустые параметры не перезаписывают текущие значения.',
+            'addsection' => 'Добавляет раздел инфоблока. Параметры: iblock_id (обязателен), name (название, обязателен), description (описание, html определяется автоматически), parent_id (ID родительского раздела, 0 — корень), code (символьный код; если не передан — генерируется автоматически, уникальный в пределах инфоблока), active (Y по умолчанию / N), picture (путь или URL картинки), fields — доп. поля JSON-строкой, в т.ч. UF_<КОД> (пользовательские свойства раздела) и SORT.',
+            'updatesection' => 'Изменяет раздел инфоблока. Параметры: id (обязателен), name, description, parent_id (ID родительского раздела; пусто — не менять, "0" — перенести в корень), code, active (меняется только при явной передаче Y/N), picture (путь или URL; "false"/"del" — удалить файл), fields — доп. поля JSON-строкой, в т.ч. UF_<КОД> (пользовательские свойства раздела). Пустые параметры не перезаписывают текущие значения.',
+            'getsection' => 'Возвращает данные раздела инфоблока: все поля + значения UF_* (пользовательские свойства раздела). Поиск по id раздела или по фильтру (JSON-строка, например {"CODE":"my-code"} или {"IBLOCK_ID":5,"=NAME":"Каталог"}). limit — количество разделов в ответе (по умолчанию 1, максимум 100; >1 — ответ массив).',
             'deletemetasection' => 'Очищает мета-теги раздела инфоблока (H1, title, description) — сбрасывает индивидуальные шаблоны и кеш наследуемых значений.'
         ];
 
@@ -2094,6 +2337,97 @@ class Tools extends App
                     ),
                 ],
                 'required' => ['id']
+            ],
+            'addsection' => [
+                'properties' => [
+                    'iblock_id' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'ID инфоблока (получить через инструмент iblocks). Обязательно.'
+                    ),
+                    'name' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Название раздела. Обязательно.'
+                    ),
+                    'description' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Описание раздела (DESCRIPTION). Тип html/text определяется автоматически.'
+                    ),
+                    'parent_id' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'ID родительского раздела (IBLOCK_SECTION_ID). 0 или пусто — раздел в корне.'
+                    ),
+                    'code' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Символьный код (CODE). Если не передан — генерируется автоматически из названия, уникальный в пределах инфоблока.'
+                    ),
+                    'active' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Активность раздела: Y (по умолчанию) / N.'
+                    ),
+                    'picture' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Путь или URL картинки раздела (PICTURE).'
+                    ),
+                    'fields' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Доп. поля — JSON-строка, например {"UF_DESCRIPTION":"Текст","SORT":100}. UF_<КОД> — значение пользовательского свойства раздела.'
+                    ),
+                ],
+                'required' => ['iblock_id', 'name']
+            ],
+            'updatesection' => [
+                'properties' => [
+                    'id' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'ID раздела инфоблока. Обязательно.'
+                    ),
+                    'name' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Название раздела. Пусто — не менять.'
+                    ),
+                    'description' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Описание раздела (DESCRIPTION). Пусто — не менять.'
+                    ),
+                    'parent_id' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'ID родительского раздела (IBLOCK_SECTION_ID). Пусто — не менять; "0" — перенести в корень.'
+                    ),
+                    'code' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Символьный код (CODE). Пусто — не менять.'
+                    ),
+                    'active' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Активность раздела: Y / N. Меняется только при явной передаче.'
+                    ),
+                    'picture' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Путь или URL картинки раздела (PICTURE); "false"/"del" — удалить файл. Пусто — не менять.'
+                    ),
+                    'fields' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Доп. поля — JSON-строка, например {"UF_DESCRIPTION":"Текст","SORT":100}. UF_<КОД> — значение пользовательского свойства раздела.'
+                    ),
+                ],
+                'required' => ['id']
+            ],
+            'getsection' => [
+                'properties' => [
+                    'id' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'ID раздела инфоблока (приоритетнее filter).'
+                    ),
+                    'filter' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Фильтр поиска раздела — JSON-строка, например {"CODE":"my-code"} или {"IBLOCK_ID":5,"=NAME":"Каталог"}. Используется, если id не задан.'
+                    ),
+                    'limit' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Количество разделов в ответе (по умолчанию 1, максимум 100). При limit>1 ответ — массив разделов.'
+                    ),
+                ],
+                'required' => []
             ],
             'additem' => [
                 'properties' => [

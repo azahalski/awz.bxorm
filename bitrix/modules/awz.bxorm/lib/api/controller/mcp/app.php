@@ -29,7 +29,7 @@ Loc::loadMessages(__FILE__);
 
 class App extends Controller
 {
-    public static string $MCP_SERVER_VERSION = '1.9.0';
+    public static string $MCP_SERVER_VERSION = '1.10.0';
 
     public static string $MCP_PROTO_VERSION = '2025-06-18';
 
