@@ -262,6 +262,15 @@ class App extends Controller
                 ],
             ],
         ];
+        //авторизация по ключу userId|TOKEN создает сессию — ядро тогда требует
+        //CSRF на POST ajax-запросов. Сервисные вызовы идут с ключом app,
+        //проверка в AppAuth — CSRF ядра отключаем для всех MCP-экшенов
+        foreach($config as $code=>$val){
+            if(is_array($val)){
+                $val['csrf'] = false;
+                $config[$code] = $val;
+            }
+        }
         return $config;
     }
 
