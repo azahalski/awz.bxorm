@@ -280,6 +280,16 @@ class Helper {
             }
         }
 
+        //MCP-сущность: действия tools/* живут в саб-контроллере Tools
+        //и не видны через listNameActions родителя — добавляем явно
+        if($entity === self::MCP_ENTITY){
+            foreach(self::getMcpActions() as $code){
+                if(isset($methods[$code])) continue;
+                $lang = Loc::getMessage('AWZ_BXORM_HELPER_METHOD_MCP_'.str_replace('/', '_', mb_strtoupper($code)));
+                $methods[$code] = $lang ?? $code;
+            }
+        }
+
         if($entity instanceof \Bitrix\Main\ORM\Entity){
             $codes = [
                 'list','update','delete','add','fields','get'
