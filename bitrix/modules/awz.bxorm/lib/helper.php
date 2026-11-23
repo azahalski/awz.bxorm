@@ -47,7 +47,25 @@ class Helper {
             'tools/processinfo',
             'tools/log_get',
             'tools/log_set',
-            'tools/file_get'
+            'tools/file_get',
+            'tools/log_off',
+            'tools/log_clear',
+            'tools/iblocks',
+            'tools/sections',
+            'tools/loadphoto',
+            'tools/tmpphoto',
+            'tools/reindexitem',
+            'tools/updateitemprop',
+            'tools/getitem',
+            'tools/updateseoitem',
+            'tools/deletemetaitem',
+            'tools/updateseosect',
+            'tools/deletemetasection',
+            'tools/additem',
+            'tools/updateitemfields',
+            'tools/addsection',
+            'tools/updatesection',
+            'tools/getsection'
         ];
     }
 
