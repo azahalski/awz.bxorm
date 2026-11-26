@@ -24,10 +24,13 @@ class HooksList extends IList implements IParams {
         Helper::editListField($row, 'ACTIVE', ['type'=>'checkbox'], $this);
 
         $domain = Application::getInstance()->getContext()->getServer()->getHttpHost();
-        $baseApiUrl = 'https://'.$domain.'/bitrix/services/main/ajax.php?action=awz:bxorm.api.app.call&app='.$row->arRes['ID'].'&key='.$row->arRes['TOKEN'].'&method=';
-        $baseApiUrlHook = 'https://'.$domain.'/bitrix/services/main/ajax.php?action=awz:bxorm.api.hook.call&app='.$row->arRes['ID'].'&key='.$row->arRes['TOKEN'].'&method=';
-        $baseApiUrl2 = 'https://'.$domain.'/bitrix/services/main/ajax.php?action=awz:bxorm.api.app.methods&app='.$row->arRes['ID'].'&key='.$row->arRes['TOKEN'];
-        $baseApiUrlHook2 = 'https://'.$domain.'/bitrix/services/main/ajax.php?action=awz:bxorm.api.hook.methods&app='.$row->arRes['ID'].'&key='.$row->arRes['TOKEN'];
+        //ключ хука показывается в URL только пользователю с правом W на модуль
+        global $APPLICATION;
+        $keySuffix = ($APPLICATION->GetGroupRight('awz.bxorm') == 'W') ? '&key='.$row->arRes['TOKEN'] : '';
+        $baseApiUrl = 'https://'.$domain.'/bitrix/services/main/ajax.php?action=awz:bxorm.api.app.call&app='.$row->arRes['ID'].$keySuffix.'&method=';
+        $baseApiUrlHook = 'https://'.$domain.'/bitrix/services/main/ajax.php?action=awz:bxorm.api.hook.call&app='.$row->arRes['ID'].$keySuffix.'&method=';
+        $baseApiUrl2 = 'https://'.$domain.'/bitrix/services/main/ajax.php?action=awz:bxorm.api.app.methods&app='.$row->arRes['ID'].$keySuffix;
+        $baseApiUrlHook2 = 'https://'.$domain.'/bitrix/services/main/ajax.php?action=awz:bxorm.api.hook.methods&app='.$row->arRes['ID'].$keySuffix;
         $baseApiUrlMcp = 'https://'.$domain.'/bitrix/services/main/ajax.php?action=awz:bxorm.api.bxmcp.callrpc&app='.$row->arRes['ID'].'&mcprpc=2.0';
 
         $urlLink = static function(string $url, string $label): string {

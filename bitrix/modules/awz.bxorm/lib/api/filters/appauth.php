@@ -95,8 +95,15 @@ class AppAuth extends BaseFilter {
 		if(strpos($key, '|')!==false){
             $userAr = explode('|',$key);
             if(count($userAr)==2){
-                global $USER;
-                $USER->Authorize($userAr[0]);
+                $userId = (int)$userAr[0];
+                if($userId > 0){
+                    //авторизация только активного пользователя
+                    $user = \CUser::GetByID($userId)->Fetch();
+                    if($user && $user['ACTIVE'] === 'Y'){
+                        global $USER;
+                        $USER->Authorize($userId);
+                    }
+                }
             }
         }
 

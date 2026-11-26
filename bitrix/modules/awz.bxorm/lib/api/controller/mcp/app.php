@@ -29,7 +29,7 @@ Loc::loadMessages(__FILE__);
 
 class App extends Controller
 {
-    public static string $MCP_SERVER_VERSION = '1.13.0';
+    public static string $MCP_SERVER_VERSION = '1.15.0';
 
     public static string $MCP_PROTO_VERSION = '2025-06-18';
 
@@ -372,6 +372,26 @@ class App extends Controller
                 ],
             ],
             'tools/getsection'=>[
+                'prefilters' => [
+                    new NoCors([],[]),
+                    new AppAuth(
+                        [], [],
+                        Scope::createFromCode('user'),
+                        []
+                    )
+                ],
+            ],
+            'tools/agentsmds'=>[
+                'prefilters' => [
+                    new NoCors([],[]),
+                    new AppAuth(
+                        [], [],
+                        Scope::createFromCode('user'),
+                        []
+                    )
+                ],
+            ],
+            'tools/orderstatuses'=>[
                 'prefilters' => [
                     new NoCors([],[]),
                     new AppAuth(

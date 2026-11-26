@@ -417,7 +417,11 @@ class App extends Controller
 
         $activeFields = [];
         foreach($fieldsParams as $fieldKey=>$fieldValue){
-            if($fieldValue['isActive'] === 'Y'){
+            $isReadonly = $fieldValue['isReadonly'] ?? ($fieldValue['isReadOnly'] ?? '');
+            if($fieldValue['isActive'] === 'Y' && $isReadonly !== 'Y'){
+                //связи ('.') и первичный ключ при создании не записываются
+                if(mb_strpos($fieldKey, '.')!==false) continue;
+                if($fieldKey === $primaryKey) continue;
                 $activeFields[] = $fieldKey;
             }
         }
@@ -427,8 +431,7 @@ class App extends Controller
                 $fieldsFin[$k] = $v;
             }
         }
-        $res = $entityClass::add($fieldsFin);
-        if(!$res->isSuccess()){
+        $res = $entityClass::add($fieldsFin);        if(!$res->isSuccess()){
             foreach($res->getErrors() as $err){
                 $this->addError($err);
             }
@@ -525,23 +528,38 @@ class App extends Controller
         }
         $query['select'] = $selectFormat;
 
-        $query['order'] = $defSort;
+        //сортировка: только поля из $sortableFields, направление нормализуется (asc/desc)
         if(isset($params['order']) && is_array($params['order'])){
-            $keyOrder = array_keys($params['order']);
-            if(in_array($keyOrder[0], $sortableFields)){
-                $query['order'] = $params['order'];
+            $orderFin = [];
+            foreach($params['order'] as $orderKey=>$orderVal){
+                $orderKey = (string)$orderKey;
+                if(!in_array($orderKey, $sortableFields, true)) continue;
+                $orderFin[$orderKey] = (strtoupper((string)$orderVal) === 'DESC') ? 'desc' : 'asc';
+            }
+            if(!empty($orderFin)){
+                $query['order'] = $orderFin;
             }
         }
+        //фильтр: только по активным полям (операторы сохраняются, имя поля сверяется с allowlist)
         if(isset($params['filter']) && is_array($params['filter'])){
-            $query['filter'] = $params['filter'];
+            $filterFin = [];
+            foreach($params['filter'] as $filterKey=>$filterVal){
+                $fieldName = preg_replace('/^[=!<>%~?@]+/','', (string)$filterKey);
+                $fieldName = rtrim($fieldName, '=');
+                if(in_array($fieldName, $activeFields, true)){
+                    $filterFin[$filterKey] = $filterVal;
+                }
+            }
+            $query['filter'] = $filterFin;
         }
 
+        //верхняя граница limit и безопасный offset
         if(!isset($params['limit'])){
             $query['limit'] = $limit;
         }else{
-            $query['limit'] = $params['limit'];
+            $query['limit'] = min(1000, max(1, (int)$params['limit']));
         }
-        $query['offset'] = $offset;
+        $query['offset'] = max(0, (int)$offset);
         if(!isset($params['count_total'])){
             $query['count_total'] = true;
         }else{

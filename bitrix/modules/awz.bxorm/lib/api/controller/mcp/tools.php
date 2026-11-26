@@ -7,6 +7,7 @@ use Awz\BxOrm\Api\Scopes\Scope;
 use Awz\BxOrm\Api\Scopes\Controller;
 use Awz\BxOrm\Api\Filters\CheckMethod;
 use Awz\BxOrm\Api\Filters\AppAuth;
+use Awz\BxOrm\Api\Filters\CheckTool;
 use Awz\BxOrm\Api\Filters\NoCors;
 use Awz\BxOrm\HooksTable;
 use Awz\BxOrm\MethodsTable;
@@ -48,7 +49,13 @@ class Tools extends App
         foreach($tmp as $code=>$val){
             $code = strtolower($code);
             if(strpos($code, self::CODE_REPLACE)!==false){
-                $config[str_replace(self::CODE_REPLACE, '', $code)] = $val;
+                $stripped = str_replace(self::CODE_REPLACE, '', $code);
+                //инструменты (все, кроме call/list) гейтятся проверкой включения в метод текущего app —
+                //в т.ч. для прямых маршрутов awz:bxorm.api.mcp.tools.<код>
+                if(!in_array($stripped, ['call','list'], true) && is_array($val) && isset($val['prefilters'])){
+                    $val['prefilters'][] = new CheckTool();
+                }
+                $config[$stripped] = $val;
             }
         }
         return $config;
@@ -199,6 +206,25 @@ class Tools extends App
             $res['path'] = (preg_match('#^[/\\\\]#', $cpFile) || preg_match('#^[a-zA-Z]:[/\\\\]#', $cpFile))
                 ? $cpFile
                 : \Bitrix\Main\Application::getDocumentRoot().'/'.ltrim($cpFile, '/');
+        }
+        //путь лога — только внутри корня сайта и вне служебных файлов (защита цепочки log_set -> log_get/log_clear)
+        $pathNorm = rtrim(str_replace('\\', '/', $res['path']), '/');
+        $docRootNorm = rtrim(str_replace('\\', '/', \Bitrix\Main\Application::getDocumentRoot()), '/');
+        if(stripos($pathNorm, $docRootNorm.'/') !== 0){
+            $res['ok'] = false;
+            $res['msg'] = 'путь лога вне корня сайта: '.$res['path'];
+            $res['configured'] = false;
+            return $res;
+        }
+        $realLog = realpath($res['path']);
+        if($realLog !== false){
+            $denyReason = $this->checkFileReadAllowed($realLog);
+            if($denyReason !== ''){
+                $res['ok'] = false;
+                $res['msg'] = $denyReason;
+                $res['configured'] = false;
+                return $res;
+            }
         }
         $res['ok'] = true;
         return $res;
@@ -479,6 +505,12 @@ class Tools extends App
                 if($file === '' || in_array(basename($file), ['', '.', '..'], true)){
                     throw new \Exception('не указано имя файла (параметр file)');
                 }
+                //полный путь лога — только внутри корня сайта (защита от чтения/усечения произвольных файлов через log_get/log_clear)
+                $fileNorm = str_replace('\\', '/', $file);
+                $docRootNorm = rtrim(str_replace('\\', '/', Application::getDocumentRoot()), '/');
+                if(stripos($fileNorm, $docRootNorm.'/') !== 0){
+                    throw new \Exception('лог-файл должен находиться внутри корня сайта: '.$docRootNorm);
+                }
             }else{
                 $file = preg_replace('/[^a-zA-Z0-9._-]/', '', basename($fileRaw));
                 if($file === '' || $file === '.' || $file === '..'){
@@ -602,8 +634,9 @@ class Tools extends App
 
                 //доп. параметры ПЕРЕКРЫВАЮТ базовые: известные ключи settings (log_size и т.д.) —
                 //в log/settings, class_name — в log/class_name, остальные — на верхний уровень $logConfig
+                //путь лога (file) через params не перекрывается — защита от подмены проверенного пути
                 $allowedExtraSettings = [
-                    'log_size', 'log_error', 'log_file_size', 'date_format', 'trace_format', 'format', 'file'
+                    'log_size', 'log_error', 'log_file_size', 'date_format', 'trace_format', 'format'
                 ];
                 $extraApplied = [];
                 $applyToSettings = function($key, $val) use (&$settings, &$extraApplied){
@@ -770,10 +803,15 @@ class Tools extends App
             (string)\Bitrix\Main\Config\Option::get('awz.bxorm', 'mcp_file_whitelist',
                 '/bitrix/php_interface/,/bitrix/modules/,/local/,/upload/')
         )));
+        $real = rtrim(str_replace('\\', '/', $real), '/');
         foreach($whitelist as $dir){
             $dirReal = realpath($docRoot.'/'.ltrim($dir, '/'));
-            if($dirReal && str_starts_with($real, $dirReal)){
-                return '';
+            if($dirReal){
+                //граница каталога обязательна: без '/' соседние каталоги с тем же префиксом тоже проходили бы
+                $dirReal = rtrim(str_replace('\\', '/', $dirReal), '/');
+                if($real === $dirReal || str_starts_with($real, $dirReal.'/')){
+                    return '';
+                }
             }
         }
 
@@ -796,8 +834,17 @@ class Tools extends App
             $path = (preg_match('#^[/\\\\]#', $file) || preg_match('#^[a-zA-Z]:[/\\\\]#', $file)) ? $file : $docRoot.'/'.$file;
             $real = realpath($path);
             $rootReal = realpath($docRoot);
-            if(!$real || $rootReal === false || !str_starts_with($real, $rootReal)){
-                return ['content'=>[['type'=>'text','text'=>'путь вне корня сайта или не существует: '.$file]], 'isError'=>true];
+            if(!$real){
+                //файл не существует: различаем «вне корня» и «не найден»
+                $pathNorm = rtrim(str_replace('\\', '/', $path), '/');
+                $rootNorm = rtrim(str_replace('\\', '/', $docRoot), '/');
+                if(stripos($pathNorm, $rootNorm.'/') === 0){
+                    return ['content'=>[['type'=>'text','text'=>'файл не найден: '.$pathNorm]], 'isError'=>true];
+                }
+                return ['content'=>[['type'=>'text','text'=>'путь вне корня сайта: '.$pathNorm]], 'isError'=>true];
+            }
+            if($rootReal === false || !str_starts_with($real, $rootReal)){
+                return ['content'=>[['type'=>'text','text'=>'путь вне корня сайта: '.$file]], 'isError'=>true];
             }
 
             $denyReason = $this->checkFileReadAllowed($real);
@@ -1216,7 +1263,7 @@ class Tools extends App
     public function loadphotoAction(string $photo = '')
     {
         try{
-            $saved = $this->saveBase64Image((string)$photo, '/upload/awz.load.ai/', false);
+            $saved = $this->saveBase64Image((string)$photo, '/upload/awz.load.ai/', true);
             if($saved === null){
                 return ['content'=>[['type'=>'text','text'=>'Некорректное изображение или формат не поддерживается. Допустимо: '.implode(', ', self::PHOTO_ALLOWED_EXTENSIONS)]], 'isError'=>true];
             }
@@ -1286,6 +1333,20 @@ class Tools extends App
             return null;
         }
 
+        if($ext === 'svg'){
+            //SVG исполняется в контексте домена сайта — убираем скрипты, обработчики событий и внешние ссылки
+            $decodedData = $this->sanitizeSvgContent($decodedData);
+            if(stripos($decodedData, '<svg') === false){
+                return null;
+            }
+        }else{
+            //растровые форматы — проверка через getimagesize
+            $imgInfo = @getimagesizefromstring($decodedData);
+            if($imgInfo === false){
+                return null;
+            }
+        }
+
         $fileName = \Bitrix\Main\Security\Random::getString(10).'.'.$ext;
         $file = new File($absDir.$fileName);
         $file->putContents($decodedData);
@@ -1320,6 +1381,27 @@ class Tools extends App
             }
         }
         return '';
+    }
+
+    /**
+     * Санитизация SVG перед сохранением в web-доступный каталог:
+     * удаляются <script>, <foreignObject>, xml-stylesheet (PI), обработчики событий on*,
+     * javascript:/data:/vbscript: в href/src/xlink:href и внешние http(s)-ссылки.
+     */
+    private function sanitizeSvgContent(string $data): string
+    {
+        $data = preg_replace('/<\?xml-stylesheet[\s\S]*?\?>/is', '', $data);
+        $data = preg_replace('/<script\b[\s\S]*?<\/script\s*>/is', '', $data);
+        $data = preg_replace('/<script\b[^>]*\/?>/is', '', $data);
+        $data = preg_replace('/<foreignobject\b[\s\S]*?<\/foreignobject\s*>/is', '', $data);
+        $data = preg_replace('/<foreignobject\b[^>]*\/?>/is', '', $data);
+        //обработчики событий on*
+        $data = preg_replace('/\son[a-z]+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/is', '', $data);
+        //javascript:/data:/vbscript: в href/src/xlink:href
+        $data = preg_replace('/(\b(?:href|src|xlink:href)\s*=\s*)(["\'])\s*(?:javascript|data|vbscript)\s*:[^"\']*\2/is', '$1$2#$2', $data);
+        //внешние ссылки http(s):// — обнуляются
+        $data = preg_replace('/(\b(?:href|src|xlink:href)\s*=\s*)(["\'])\s*https?:\/\/[^"\']*\2/is', '$1$2#$2', $data);
+        return $data;
     }
 
     /**
@@ -1409,10 +1491,53 @@ class Tools extends App
             if(!$elem){
                 return ['content'=>[['type'=>'text','text'=>'Элемент не найден: '.$elementId]], 'isError'=>true];
             }
+            $iblockId = (int)$elem['IBLOCK_ID'];
+
+            //свойство должно существовать в инфоблоке — иначе SetPropertyValueCode молча ничего не делает
+            $property = null;
+            $propRes = \CIBlock::GetProperties($iblockId, [], ['CODE' => $code]);
+            while($prop = $propRes->Fetch()){
+                if((string)$prop['CODE'] === $code){ $property = $prop; }
+            }
+            if(!$property){
+                return ['content'=>[['type'=>'text','text'=>'Свойство с кодом "'.$code.'" не найдено в инфоблоке #'.$iblockId]], 'isError'=>true];
+            }
+
+            //для типа «список» (L) значение — текст варианта: резолвим в ID варианта
+            if($property['PROPERTY_TYPE'] === 'L' && !is_array($value)){
+                $valueText = trim((string)$value);
+                $enumId = 0;
+                $enumRes = \CIBlockPropertyEnum::GetList([], ['IBLOCK_ID' => $iblockId, 'CODE' => $code]);
+                while($enum = $enumRes->Fetch()){
+                    if(mb_strtolower(trim((string)$enum['VALUE'])) === mb_strtolower($valueText)){
+                        $enumId = (int)$enum['ID'];
+                        break;
+                    }
+                }
+                if(!$enumId){
+                    return ['content'=>[['type'=>'text','text'=>'Вариант "'.$valueText.'" не найден у свойства '.$code.' (тип «список»); допустимые варианты можно получить через getitem (PROPERTIES)']], 'isError'=>true];
+                }
+                $value = $enumId;
+            }
 
             \CIBlockElement::SetPropertyValueCode($elementId, $code, $value);
 
-            return ['content'=>[['type'=>'text','text'=>'Свойство '.$code.' элемента #'.$elementId.' обновлено']]];
+            //проверка факта записи: значение непусто; для списка — вариант проставлен (VALUE_ENUM_ID),
+            //строгое сравнение не применяем (нарушало бы same-value перезапись в L)
+            $setRes = \CIBlockElement::GetProperty($iblockId, $elementId, [], ['CODE' => $code]);
+            $setOk = false;
+            while($p = $setRes->Fetch()){
+                if($p['PROPERTY_TYPE'] === 'L'){
+                    $setOk = $setOk || ((int)$p['VALUE_ENUM_ID'] > 0);
+                }else{
+                    $setOk = $setOk || (trim((string)$p['VALUE']) !== '');
+                }
+            }
+            if(!$setOk){
+                return ['content'=>[['type'=>'text','text'=>'Свойство '.$code.' элемента #'.$elementId.' не обновилось (проверка после записи не пройдена)']], 'isError'=>true];
+            }
+
+            return ['content'=>[['type'=>'text','text'=>'Свойство '.$code.' ('.$property['NAME'].') элемента #'.$elementId.' обновлено']]];
         }catch(\Throwable $e){
             return ['content'=>[['type'=>'text','text'=>'tool updateitemprop error: '.$e->getMessage()]], 'isError'=>true];
         }
@@ -1709,14 +1834,22 @@ class Tools extends App
         if(is_array($fields)){
             foreach($fields as $key=>$val){
                 $key = (string)$key;
-                if($key === '' || in_array($key, ['IBLOCK_ID', 'ID', 'NAME', 'DETAIL_TEXT', 'DETAIL_TEXT_TYPE',
+                if($key === '' || in_array($key, ['IBLOCK_ID', 'ID', 'NAME',
                     'IBLOCK_SECTION', 'PREVIEW_PICTURE', 'DETAIL_PICTURE', 'ACTIVE'], true)){
                     continue;
                 }
                 if(str_starts_with($key, 'PROPERTY_')){
                     $arFields[$key] = $val;
                 }else{
-                    $arFields[strtoupper($key)] = $val;
+                    $key = strtoupper($key);
+                    //DETAIL_TEXT/DETAIL_TEXT_TYPE: явная передача перекрывает авто-детект html/text
+                    if($key === 'DETAIL_TEXT_TYPE' && !is_string($val)) continue;
+                    if($key === 'DETAIL_TEXT_TYPE'){
+                        $val = (in_array(strtolower(trim($val)), ['html', 'text'], true)) ? strtolower(trim($val)) : $arFields['DETAIL_TEXT_TYPE'] ?? 'text';
+                        $arFields['DETAIL_TEXT_TYPE'] = $val;
+                        continue;
+                    }
+                    $arFields[$key] = $val;
                 }
             }
         }
@@ -1901,9 +2034,16 @@ class Tools extends App
         if(is_array($fields)){
             foreach($fields as $key=>$val){
                 $key = strtoupper((string)$key);
-                if($key === '' || in_array($key, ['IBLOCK_ID', 'ID', 'NAME', 'DESCRIPTION', 'DESCRIPTION_TYPE',
+                if($key === '' || in_array($key, ['IBLOCK_ID', 'ID', 'NAME',
                     'IBLOCK_SECTION_ID', 'CODE', 'ACTIVE', 'PICTURE', 'DETAIL_PICTURE', 'SORT', 'GLOBAL_ACTIVE',
                     'DEPTH_LEVEL', 'LEFT_MARGIN', 'RIGHT_MARGIN', 'TIMESTAMP_X', 'MODIFIED_BY'], true)){
+                    continue;
+                }
+                //DESCRIPTION/DESCRIPTION_TYPE: явная передача перекрывает авто-детект html/text
+                if($key === 'DESCRIPTION_TYPE' && !is_string($val)) continue;
+                if($key === 'DESCRIPTION_TYPE'){
+                    $arFields['DESCRIPTION_TYPE'] = (in_array(strtolower(trim($val)), ['html', 'text'], true))
+                        ? strtolower(trim($val)) : ($arFields['DESCRIPTION_TYPE'] ?? 'text');
                     continue;
                 }
                 $arFields[$key] = $val;
@@ -2080,8 +2220,19 @@ class Tools extends App
             }
 
             if(empty($rows)){
-                return ['content'=>[['type'=>'text','text'=>'Раздел не найден (id="'.$id.'", filter='.$filter.')']], 'isError'=>true];
+                //пустой результат — не ошибка (нормальная ситуация при поиске по фильтру)
+                return ['content'=>[['type'=>'text','text'=>'Разделы не найдены (id="'.$id.'", filter='.$filter.'). Пустой результат поиска — это нормальная ситуация, используйте фильтр без этого условия.']]];
             }
+
+            //DateTime-объекты сериализуются в {} — приводим к строкам
+            foreach($rows as &$row){
+                foreach($row as $rKey=>$rVal){
+                    if($rVal instanceof \Bitrix\Main\Type\DateTime){
+                        $row[$rKey] = $rVal->toString();
+                    }
+                }
+            }
+            unset($row);
 
             $text = ($limit > 1) ? json_encode($rows, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)
                 : json_encode($rows[0], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
@@ -2125,6 +2276,7 @@ class Tools extends App
             'deletemetasection' => 'Очищает мета-теги раздела инфоблока (H1, title, description) — сбрасывает индивидуальные шаблоны и кеш наследуемых значений.',
             'orders' => 'Ищет заказы (модуль sale) по фильтру, максимум 50 заказов за вызов, сортировка ID DESC. filter — JSON-объект с полями заказа и операторами: {"STATUS_ID":"N"}, {"PAYED":"Y"}, {"USER_ID":5}, {"<ID":1000}, {">ID":0}, {"ACCOUNT_NUMBER":"..."} и т.д. Параметр fields — JSON-массив кодов полей (по умолчанию ID, ACCOUNT_NUMBER, DATE_INSERT, STATUS_ID, PAYED, CANCELED, PRICE, CURRENCY, USER_ID и др.). Пагинация: для следующей страницы вызывай снова с filter={"<ID": <минимальный ID из текущей выдачи>}.',
             'orderget' => 'Возвращает детальную информацию о заказе (модуль sale) в JSON: поля заказа (статус, оплата, цены, пользователь, комментарии), список оплат (PAID, платежная система, чек), отгрузки (служба доставки, статус, трек-номер) и состав корзины (товары, количество, цены). Поиск по order_id или account_number.',
+            'agentsmds' => 'Возвращает пути ко всем .md файлам в корнях каталогов модулей (/bitrix/modules/имя_модуля/, /local/modules/имя_модуля/ — без подкаталогов), включая AGENTS.md и README.md, с размером каждого. Параметров нет. Содержимое читай инструментом file_get по полученному пути.',
             'orderstatuses' => 'Возвращает список статусов заказа (модуль sale) с кодами и названиями. Используй перед orderstatus, чтобы узнать допустимые коды статусов. Параметр color=Y — только статусы с цветом (доступные для ручной смены в админке).',
             'orderstatus' => 'Меняет статус заказа (модуль sale). Параметры: order_id — ID заказа (обязателен), status — код статуса (список — инструмент orderstatuses). Запускает события смены статуса (письма, интеграции).',
             'orderpay' => 'Устанавливает оплату заказа (модуль sale). Параметры: order_id — ID заказа (обязателен), paid — Y (оплачен, по умолчанию) / N (не оплачен), payment_id — ID конкретной оплаты (опционально; без него меняются все оплаты заказа). Запускает события оплаты.'
@@ -2387,7 +2539,7 @@ class Tools extends App
                     ),
                     'fields' => new DTO\Tool\PropertySchema(
                         type: 'string',
-                        description: 'Доп. поля — JSON-строка, например {"UF_DESCRIPTION":"Текст","SORT":100}. UF_<КОД> — значение пользовательского свойства раздела.'
+                        description: 'Доп. поля — JSON-строка, например {"UF_DESCRIPTION":"Текст","SORT":100}. UF_<КОД> — значение пользовательского свойства раздела. DESCRIPTION/DESCRIPTION_TYPE (text|html) — перекрывают автоматическое определение типа описания.'
                     ),
                 ],
                 'required' => ['iblock_id', 'name']
@@ -2428,7 +2580,7 @@ class Tools extends App
                     ),
                     'fields' => new DTO\Tool\PropertySchema(
                         type: 'string',
-                        description: 'Доп. поля — JSON-строка, например {"UF_DESCRIPTION":"Текст","SORT":100}. UF_<КОД> — значение пользовательского свойства раздела.'
+                        description: 'Доп. поля — JSON-строка, например {"UF_DESCRIPTION":"Текст","SORT":100}. UF_<КОД> — значение пользовательского свойства раздела. DESCRIPTION/DESCRIPTION_TYPE (text|html) — перекрывают автоматическое определение типа описания.'
                     ),
                 ],
                 'required' => ['id']
@@ -2482,7 +2634,7 @@ class Tools extends App
                     ),
                     'fields' => new DTO\Tool\PropertySchema(
                         type: 'string',
-                        description: 'Доп. поля — JSON-строка, например {"CODE":"my-code","PROPERTY_MATERIAL":"Сталь","PREVIEW_TEXT":"Анонс"}. PROPERTY_<КОД> — значение свойства.'
+                        description: 'Доп. поля — JSON-строка, например {"CODE":"my-code","PROPERTY_MATERIAL":"Сталь","PREVIEW_TEXT":"Анонс"}. PROPERTY_<КОД> — значение свойства. DETAIL_TEXT/DETAIL_TEXT_TYPE (text|html) — перекрывают автоматическое определение типа описания.'
                     ),
                 ],
                 'required' => ['iblock_id', 'name']
@@ -2519,7 +2671,7 @@ class Tools extends App
                     ),
                     'fields' => new DTO\Tool\PropertySchema(
                         type: 'string',
-                        description: 'Доп. поля — JSON-строка, например {"CODE":"my-code","PROPERTY_MATERIAL":"Сталь"}. PROPERTY_<КОД> — значение свойства.'
+                        description: 'Доп. поля — JSON-строка, например {"CODE":"my-code","PROPERTY_MATERIAL":"Сталь"}. PROPERTY_<КОД> — значение свойства. DETAIL_TEXT/DETAIL_TEXT_TYPE (text|html) — перекрывают автоматическое определение типа описания.'
                     ),
                 ],
                 'required' => ['id']
@@ -2548,6 +2700,10 @@ class Tools extends App
                         description: 'Номер заказа (ACCOUNT_NUMBER); используется, если order_id не задан.'
                     ),
                 ],
+                'required' => []
+            ],
+            'agentsmds' => [
+                'properties' => [],
                 'required' => []
             ],
             'orderstatuses' => [
@@ -2786,7 +2942,9 @@ class Tools extends App
             ];
 
             $payments = [];
-            foreach($order->getPayment() as $payment){
+            //getPayment() есть только у \Bitrix\Sale\Order, у CRM-заказов (Bitrix\Crm\Order\Order) — getPaymentCollection()
+            $paymentCollection = (method_exists($order, 'getPayment')) ? $order->getPayment() : $order->getPaymentCollection();
+            foreach($paymentCollection as $payment){
                 $payments[] = [
                     'ID' => (int)$payment->getId(),
                     'PAY_SYSTEM_ID' => (int)$payment->getPaymentSystemId(),
@@ -2802,7 +2960,7 @@ class Tools extends App
 
             $shipments = [];
             foreach($order->getShipmentCollection() as $shipment){
-                if((int)$shipment->getSystemShipmentId() > 0 && $shipment->isSystem()) continue;
+                if($shipment->isSystem()) continue;
                 $shipments[] = [
                     'ID' => (int)$shipment->getId(),
                     'DELIVERY_ID' => (int)$shipment->getDeliveryId(),
@@ -2816,7 +2974,8 @@ class Tools extends App
             $result['SHIPMENTS'] = $shipments;
 
             $basket = [];
-            foreach($order->getBasket() as $item){
+            $basketCollection = $order->getBasket();
+            foreach($basketCollection ? $basketCollection : [] as $item){
                 /** @var \Bitrix\Sale\BasketItem $item */
                 if($item->isBundleParent()) continue;
                 $basket[] = [
@@ -2839,6 +2998,46 @@ class Tools extends App
     }
 
     /**
+     * Возвращает пути ко всем .md файлам в корнях каталогов модулей
+     * (/bitrix/modules/имя_модуля/ и /local/modules/имя_модуля/, без подкаталогов).
+     */
+    public function agentsmdsAction(): array
+    {
+        try{
+            $docRoot = Application::getDocumentRoot();
+            $dirs = [
+                $docRoot.'/bitrix/modules/*/',
+                $docRoot.'/local/modules/*/',
+            ];
+            $found = [];
+            foreach($dirs as $dirPattern){
+                if(!is_dir(rtrim($dirPattern, '/*'))) continue;
+                foreach(glob($dirPattern, GLOB_ONLYDIR) as $moduleDir){
+                    //любые .md в корне модуля (не рекурсивно)
+                    foreach(glob($moduleDir.'*.md') as $path){
+                        if(is_file($path) && !isset($found[strtolower($path)])){
+                            $found[strtolower($path)] = $path;
+                        }
+                    }
+                }
+            }
+            if(empty($found)){
+                return ['content'=>[['type'=>'text','text'=>'Файлы .md в корнях каталогов модулей не найдены']]];
+            }
+            $out = ['Найдено .md в корнях модулей: '.count($found)];
+            foreach($found as $path){
+                $out[] = $path.' ('.filesize($path).' байт)';
+            }
+            return ['content'=>[[
+                'type'=>'text',
+                'text'=>implode("\n", $out)."\nСодержимое читай инструментом file_get по пути."
+            ]]];
+        }catch(\Throwable $e){
+            return ['content'=>[['type'=>'text','text'=>'tool agentsmds error: '.$e->getMessage()]], 'isError'=>true];
+        }
+    }
+
+    /**
      * Возвращает список статусов заказа (sale) — для выбора STATUS_ID.
      * color — Y: только статусы с цветом (видимые в админке для смены вручную).
      */
@@ -2849,14 +3048,17 @@ class Tools extends App
                 return ['content'=>[['type'=>'text','text'=>'Модуль sale не установлен']], 'isError'=>true];
             }
             $rows = [];
-            $res = \CSaleStatus::GetList([], [], false, false, ['ID','NAME','SORT','COLOR']);
-            while($row = $res->Fetch()){
-                $name = '';
-                foreach((array)($row['NAME'] ?? []) as $lid=>$val){ $name = (string)$val; }
-                if(is_string($row['NAME'] ?? null) && $row['NAME'] !== '') $name = (string)$row['NAME'];
+            //StatusTable напрямую: без дублей из-за join по языкам (b_sale_status_lang), тип 'O' — статусы заказов
+            $langFilter = ['=Bitrix\Sale\Internals\StatusLangTable:STATUS.LID' => LANGUAGE_ID];
+            $res = \Bitrix\Sale\Internals\StatusTable::getList([
+                'select' => ['ID','SORT','COLOR','NAME' => 'Bitrix\Sale\Internals\StatusLangTable:STATUS.NAME'],
+                'filter' => array_merge(['=TYPE' => \Bitrix\Sale\OrderStatus::TYPE], $langFilter),
+                'order' => ['SORT' => 'ASC', 'ID' => 'ASC'],
+            ]);
+            while($row = $res->fetch()){
                 $rows[] = [
                     'ID' => (string)$row['ID'],
-                    'NAME' => $name,
+                    'NAME' => (string)($row['NAME'] ?? ''),
                     'SORT' => (int)($row['SORT'] ?? 0),
                     'COLOR' => (string)($row['COLOR'] ?? ''),
                 ];
@@ -2894,6 +3096,14 @@ class Tools extends App
             if($status === ''){
                 return ['content'=>[['type'=>'text','text'=>'не указан код статуса (параметр status), список — инструмент orderstatuses']], 'isError'=>true];
             }
+            //валидация: статус должен существовать среди статусов заказов (тип O)
+            $statusExists = \Bitrix\Sale\Internals\StatusTable::getRow([
+                'select' => ['ID'],
+                'filter' => ['=ID' => $status, '=TYPE' => \Bitrix\Sale\OrderStatus::TYPE],
+            ]);
+            if(!$statusExists){
+                return ['content'=>[['type'=>'text','text'=>'статус "'.$status.'" не найден среди статусов заказов, список — инструмент orderstatuses']], 'isError'=>true];
+            }
 
             $order = \Bitrix\Sale\Order::load($orderId);
             if(!$order){
@@ -2901,6 +3111,11 @@ class Tools extends App
             }
             $oldStatus = (string)$order->getField('STATUS_ID');
             $r = $order->setField('STATUS_ID', $status);
+            if(!$r->isSuccess()){
+                return ['content'=>[['type'=>'text','text'=>'Ошибка установки статуса: '.implode('; ', $r->getErrorMessages())]], 'isError'=>true];
+            }
+            //проставляем дату смены статуса (ядро само её не заполняет при setField)
+            $r = $order->setField('DATE_STATUS', new \Bitrix\Main\Type\DateTime());
             if(!$r->isSuccess()){
                 return ['content'=>[['type'=>'text','text'=>'Ошибка установки статуса: '.implode('; ', $r->getErrorMessages())]], 'isError'=>true];
             }
@@ -2939,7 +3154,8 @@ class Tools extends App
             if(!$order){
                 return ['content'=>[['type'=>'text','text'=>'Заказ не найден: '.$orderId]], 'isError'=>true];
             }
-            $paymentCollection = $order->getPayment();
+            //getPayment() есть только у \Bitrix\Sale\Order, у CRM-заказов (Bitrix\Crm\Order\Order) — getPaymentCollection()
+            $paymentCollection = (method_exists($order, 'getPayment')) ? $order->getPayment() : $order->getPaymentCollection();
             if(!$paymentCollection || !count($paymentCollection)){
                 return ['content'=>[['type'=>'text','text'=>'У заказа нет оплат']], 'isError'=>true];
             }
@@ -2955,6 +3171,13 @@ class Tools extends App
             }
             if(empty($changed)){
                 return ['content'=>[['type'=>'text','text'=>'Оплата не найдена: #'.$paymentId]], 'isError'=>true];
+            }
+            //дата оплаты (ядро при setPaid её на заказе не проставляет)
+            if($paid === 'Y'){
+                $r = $order->setField('DATE_PAYED', new \Bitrix\Main\Type\DateTime());
+                if(!$r->isSuccess()){
+                    return ['content'=>[['type'=>'text','text'=>'Ошибка установки даты оплаты: '.implode('; ', $r->getErrorMessages())]], 'isError'=>true];
+                }
             }
             $r = $order->save();
             if(!$r->isSuccess()){

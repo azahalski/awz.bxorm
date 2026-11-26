@@ -2,3 +2,4 @@
 $MESS["AWZ_BXORM_ADMIN_MENU_TITLE"] = "AWZ: MCP, ORM Api, Вебхуки";
 $MESS["AWZ_BXORM_ADMIN_MENU_HOOK"] = "Вебхуки";
 $MESS["AWZ_BXORM_ADMIN_MENU_METHODS"] = "Методы API";
+$MESS["AWZ_BXORM_ADMIN_MENU_OPTIONS"] = "Настройки модуля";

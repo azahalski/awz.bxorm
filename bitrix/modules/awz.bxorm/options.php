@@ -117,12 +117,18 @@ $tabControl->Begin();
                     </tr>
                 </table>
                 <br>
+                <?
+                //токен и URL с ключом — только для права W; R-пользователям значение маскируется
+                $mcpShowKey = ($MODULE_RIGHT == 'W');
+                ?>
                 <?if($mcpHook && $mcpMethodId){?>
                     <?=Loc::getMessage('AWZ_BXORM_OPT_MCP_URL')?>: <a href="<?=htmlspecialcharsbx($mcpUrl)?>" target="_blank"><?=htmlspecialcharsbx($mcpUrl)?></a><br>
-                    <?=Loc::getMessage('AWZ_BXORM_OPT_MCP_TOKEN')?>: <b><?=htmlspecialcharsbx($mcpHook['TOKEN'])?></b><br>
-                    <?=Loc::getMessage('AWZ_BXORM_OPT_MCP_AUTH_DESC')?><br>
-                    <?=Loc::getMessage('AWZ_BXORM_OPT_MCP_AUTH_QUERY')?>: <code><?=htmlspecialcharsbx($mcpUrl)?>&key=<?=htmlspecialcharsbx($mcpHook['TOKEN'])?></code><br>
-                    <?=Loc::getMessage('AWZ_BXORM_OPT_MCP_AUTH_HEADER')?>: <code>Authorization: Token <?=htmlspecialcharsbx($mcpHook['TOKEN'])?></code>
+                    <?=Loc::getMessage('AWZ_BXORM_OPT_MCP_TOKEN')?>: <b><?=$mcpShowKey ? htmlspecialcharsbx($mcpHook['TOKEN']) : '***'?></b><br>
+                    <?if($mcpShowKey){?>
+                        <?=Loc::getMessage('AWZ_BXORM_OPT_MCP_AUTH_DESC')?><br>
+                        <?=Loc::getMessage('AWZ_BXORM_OPT_MCP_AUTH_QUERY')?>: <code><?=htmlspecialcharsbx($mcpUrl)?>&key=<?=htmlspecialcharsbx($mcpHook['TOKEN'])?></code><br>
+                        <?=Loc::getMessage('AWZ_BXORM_OPT_MCP_AUTH_HEADER')?>: <code>Authorization: Token <?=htmlspecialcharsbx($mcpHook['TOKEN'])?></code>
+                    <?}?>
                     <br><br>
                 <?}else{?>
                     <?=Loc::getMessage('AWZ_BXORM_OPT_MCP_NOT_CREATED')?><br><br>

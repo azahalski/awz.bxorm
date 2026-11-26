@@ -66,6 +66,8 @@ class Helper {
             'tools/addsection',
             'tools/updatesection',
             'tools/getsection',
+            'tools/agentsmds',
+            'tools/orderstatuses',
             'tools/orders',
             'tools/orderget',
             'tools/orderstatus',
