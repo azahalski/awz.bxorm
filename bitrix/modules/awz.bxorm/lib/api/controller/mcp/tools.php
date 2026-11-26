@@ -2122,7 +2122,12 @@ class Tools extends App
             'addsection' => 'Добавляет раздел инфоблока. Параметры: iblock_id (обязателен), name (название, обязателен), description (описание, html определяется автоматически), parent_id (ID родительского раздела, 0 — корень), code (символьный код; если не передан — генерируется автоматически, уникальный в пределах инфоблока), active (Y по умолчанию / N), picture / detail_picture (путь или URL картинок), fields — доп. поля JSON-строкой, в т.ч. UF_<КОД> (пользовательские свойства раздела) и SORT.',
             'updatesection' => 'Изменяет раздел инфоблока. Параметры: id (обязателен), name, description, parent_id (ID родительского раздела; пусто — не менять, "0" — перенести в корень), code, active (меняется только при явной передаче Y/N), picture / detail_picture (путь или URL; "false"/"del" — удалить файл), fields — доп. поля JSON-строкой, в т.ч. UF_<КОД> (пользовательские свойства раздела). Пустые параметры не перезаписывают текущие значения.',
             'getsection' => 'Возвращает данные раздела инфоблока: все поля + значения UF_* (пользовательские свойства раздела). Поиск по id раздела или по фильтру (JSON-строка, например {"CODE":"my-code"} или {"IBLOCK_ID":5,"=NAME":"Каталог"}). limit — количество разделов в ответе (по умолчанию 1, максимум 100; >1 — ответ массив).',
-            'deletemetasection' => 'Очищает мета-теги раздела инфоблока (H1, title, description) — сбрасывает индивидуальные шаблоны и кеш наследуемых значений.'
+            'deletemetasection' => 'Очищает мета-теги раздела инфоблока (H1, title, description) — сбрасывает индивидуальные шаблоны и кеш наследуемых значений.',
+            'orders' => 'Ищет заказы (модуль sale) по фильтру, максимум 50 заказов за вызов, сортировка ID DESC. filter — JSON-объект с полями заказа и операторами: {"STATUS_ID":"N"}, {"PAYED":"Y"}, {"USER_ID":5}, {"<ID":1000}, {">ID":0}, {"ACCOUNT_NUMBER":"..."} и т.д. Параметр fields — JSON-массив кодов полей (по умолчанию ID, ACCOUNT_NUMBER, DATE_INSERT, STATUS_ID, PAYED, CANCELED, PRICE, CURRENCY, USER_ID и др.). Пагинация: для следующей страницы вызывай снова с filter={"<ID": <минимальный ID из текущей выдачи>}.',
+            'orderget' => 'Возвращает детальную информацию о заказе (модуль sale) в JSON: поля заказа (статус, оплата, цены, пользователь, комментарии), список оплат (PAID, платежная система, чек), отгрузки (служба доставки, статус, трек-номер) и состав корзины (товары, количество, цены). Поиск по order_id или account_number.',
+            'orderstatuses' => 'Возвращает список статусов заказа (модуль sale) с кодами и названиями. Используй перед orderstatus, чтобы узнать допустимые коды статусов. Параметр color=Y — только статусы с цветом (доступные для ручной смены в админке).',
+            'orderstatus' => 'Меняет статус заказа (модуль sale). Параметры: order_id — ID заказа (обязателен), status — код статуса (список — инструмент orderstatuses). Запускает события смены статуса (письма, интеграции).',
+            'orderpay' => 'Устанавливает оплату заказа (модуль sale). Параметры: order_id — ID заказа (обязателен), paid — Y (оплачен, по умолчанию) / N (не оплачен), payment_id — ID конкретной оплаты (опционально; без него меняются все оплаты заказа). Запускает события оплаты.'
         ];
 
         $schemas = [
@@ -2518,6 +2523,71 @@ class Tools extends App
                     ),
                 ],
                 'required' => ['id']
+            ],
+            'orders' => [
+                'properties' => [
+                    'filter' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Фильтр — JSON-объект: {"STATUS_ID":"N"}, {"PAYED":"Y"}, {"USER_ID":5}, {"<ID":1000}, {">ID":0}. Для следующей страницы: {"<ID": <минимальный ID предыдущей выдачи>}. Пусто — все заказы (первые 50).'
+                    ),
+                    'fields' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'JSON-массив кодов полей заказа, например ["ID","ACCOUNT_NUMBER","STATUS_ID","PRICE"]. Пусто — стандартный набор полей.'
+                    ),
+                ],
+                'required' => []
+            ],
+            'orderget' => [
+                'properties' => [
+                    'order_id' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'ID заказа (приоритетнее account_number).'
+                    ),
+                    'account_number' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Номер заказа (ACCOUNT_NUMBER); используется, если order_id не задан.'
+                    ),
+                ],
+                'required' => []
+            ],
+            'orderstatuses' => [
+                'properties' => [
+                    'color' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Y — только статусы с цветом (доступные для ручной смены в админке); пусто — все'
+                    ),
+                ],
+                'required' => []
+            ],
+            'orderstatus' => [
+                'properties' => [
+                    'order_id' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'ID заказа. Обязательно.'
+                    ),
+                    'status' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Код статуса (ID из инструмента orderstatuses). Обязательно.'
+                    ),
+                ],
+                'required' => ['order_id', 'status']
+            ],
+            'orderpay' => [
+                'properties' => [
+                    'order_id' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'ID заказа. Обязательно.'
+                    ),
+                    'paid' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'Y — оплатить (по умолчанию), N — снять оплату'
+                    ),
+                    'payment_id' => new DTO\Tool\PropertySchema(
+                        type: 'string',
+                        description: 'ID конкретной оплаты заказа; пусто — все оплаты заказа'
+                    ),
+                ],
+                'required' => ['order_id']
             ]
         ];
 
@@ -2576,5 +2646,324 @@ class Tools extends App
         }
 
         return ["tools"=>$tools];
+    }
+
+    /**
+     * Поиск заказов (sale) по фильтру, максимум 50 заказов, сортировка ID DESC.
+     * filter — JSON-объект с полями заказа, в т.ч. с операторами: {"<ID": 1000} — следующая страница,
+     * {">ID": 0}, {"STATUS_ID":"N"}, {"PAYED":"Y"}, {"USER_ID":5}, {"ACCOUNT_NUMBER":"..."} и т.д.
+     * Для следующей страницы используй {"<ID": <минимальный ID из выдачи>}.
+     */
+    public function ordersAction(string $filter = '', string $fields = ''): array
+    {
+        try{
+            if(!Loader::includeModule('sale')){
+                return ['content'=>[['type'=>'text','text'=>'Модуль sale не установлен']], 'isError'=>true];
+            }
+            $limit = 50;
+            $arFilter = [];
+            $filter = trim($filter);
+            if($filter !== ''){
+                $decoded = json_decode($filter, true);
+                if(!is_array($decoded)){
+                    return ['content'=>[['type'=>'text','text'=>'некорректный JSON в параметре filter (ожидается объект вида {"STATUS_ID":"N"})']], 'isError'=>true];
+                }
+                foreach($decoded as $key=>$val){
+                    $key = trim((string)$key);
+                    if($key === '') continue;
+                    if(preg_match('/^(>=|<=|<>|>|<|=|!|~|%)?[\w.]+$/i', $key)){
+                        $arFilter[$key] = $val;
+                    }
+                }
+            }
+
+            $select = ['ID','ACCOUNT_NUMBER','DATE_INSERT','DATE_UPDATE','STATUS_ID','PAYED','CANCELED',
+                'ALLOW_DELIVERY','DEDUCTED','PRICE','SUM_PAID','CURRENCY','USER_ID','RESPONSIBLE_ID','PAY_SYSTEM_ID',
+                'DELIVERY_ID','COMMENTS'];
+            $fields = trim($fields);
+            if($fields !== ''){
+                $decoded = json_decode($fields, true);
+                if(is_array($decoded)){
+                    $custom = array_values(array_filter(array_map('strval', $decoded), function($v){ return $v !== ''; }));
+                    if(!empty($custom)){
+                        $select = array_values(array_unique(array_merge(['ID'], $custom)));
+                    }
+                }
+            }
+
+            $rows = [];
+            try{
+                $res = \Bitrix\Sale\Internals\OrderTable::getList([
+                    'select' => $select,
+                    'filter' => $arFilter,
+                    'order' => ['ID' => 'DESC'],
+                    'limit' => $limit,
+                ]);
+                $rows = $res->fetchAll();
+            }catch(\Throwable $e){
+                return ['content'=>[['type'=>'text','text'=>'Ошибка запроса заказов: '.$e->getMessage()]], 'isError'=>true];
+            }
+
+            if(empty($rows)){
+                return ['content'=>[['type'=>'text','text'=>'Заказы не найдены (filter='.$filter.')']]];
+            }
+
+            foreach($rows as &$row){
+                if(isset($row['DATE_INSERT']) && $row['DATE_INSERT'] instanceof \Bitrix\Main\Type\DateTime){
+                    $row['DATE_INSERT'] = $row['DATE_INSERT']->toString();
+                }
+                if(isset($row['DATE_UPDATE']) && $row['DATE_UPDATE'] instanceof \Bitrix\Main\Type\DateTime){
+                    $row['DATE_UPDATE'] = $row['DATE_UPDATE']->toString();
+                }
+            }
+            unset($row);
+
+            $hasMore = count($rows) >= $limit;
+            $text = json_encode($rows, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+            $out = 'Найдено заказов: '.count($rows).' (макс. '.$limit.', сортировка ID DESC)';
+            if($hasMore){
+                $out .= "\nВозможно, есть еще заказы — для следующей страницы вызови снова с filter={\"<ID\":".$rows[count($rows)-1]['ID']."}";
+            }
+            $out .= "\n".$text;
+
+            return ['content'=>[['type'=>'text','text'=>$out]]];
+        }catch(\Throwable $e){
+            return ['content'=>[['type'=>'text','text'=>'tool orders error: '.$e->getMessage()]], 'isError'=>true];
+        }
+    }
+
+    /**
+     * Детальная информация о заказе (sale): поля заказа, оплаты, отгрузки, корзина.
+     * order_id — ID заказа (или ACCOUNT_NUMBER в параметре account_number).
+     */
+    public function ordergetAction(string $order_id = '', string $account_number = ''): array
+    {
+        try{
+            if(!Loader::includeModule('sale')){
+                return ['content'=>[['type'=>'text','text'=>'Модуль sale не установлен']], 'isError'=>true];
+            }
+            $orderId = (int)$order_id;
+            $accountNumber = trim($account_number);
+            if(!$orderId && $accountNumber === ''){
+                return ['content'=>[['type'=>'text','text'=>'укажите order_id или account_number']], 'isError'=>true];
+            }
+            if(!$orderId && $accountNumber !== ''){
+                $row = \Bitrix\Sale\Internals\OrderTable::getRow([
+                    'select' => ['ID'],
+                    'filter' => ['=ACCOUNT_NUMBER' => $accountNumber],
+                ]);
+                if(!$row){
+                    return ['content'=>[['type'=>'text','text'=>'Заказ не найден (ACCOUNT_NUMBER='.$accountNumber.')']], 'isError'=>true];
+                }
+                $orderId = (int)$row['ID'];
+            }
+
+            $order = \Bitrix\Sale\Order::load($orderId);
+            if(!$order){
+                return ['content'=>[['type'=>'text','text'=>'Заказ не найден: '.$orderId]], 'isError'=>true];
+            }
+
+            $fields = $order->getFields()->getValues();
+            $result = [
+                'ID' => (int)$fields['ID'],
+                'ACCOUNT_NUMBER' => (string)$fields['ACCOUNT_NUMBER'],
+                'DATE_INSERT' => (isset($fields['DATE_INSERT']) && $fields['DATE_INSERT'] instanceof \Bitrix\Main\Type\DateTime)
+                    ? $fields['DATE_INSERT']->toString() : (string)($fields['DATE_INSERT'] ?? ''),
+                'DATE_UPDATE' => (isset($fields['DATE_UPDATE']) && $fields['DATE_UPDATE'] instanceof \Bitrix\Main\Type\DateTime)
+                    ? $fields['DATE_UPDATE']->toString() : (string)($fields['DATE_UPDATE'] ?? ''),
+                'STATUS_ID' => (string)$fields['STATUS_ID'],
+                'CANCELED' => (string)$fields['CANCELED'],
+                'PAYED' => (string)$fields['PAYED'],
+                'ALLOW_DELIVERY' => (string)$fields['ALLOW_DELIVERY'],
+                'PRICE' => (float)$fields['PRICE'],
+                'SUM_PAID' => (float)$fields['SUM_PAID'],
+                'CURRENCY' => (string)$fields['CURRENCY'],
+                'USER_ID' => (int)$fields['USER_ID'],
+                'USER_DESCRIPTION' => (string)($fields['USER_DESCRIPTION'] ?? ''),
+                'COMMENTS' => (string)($fields['COMMENTS'] ?? ''),
+                'REASON_CANCELED' => (string)($fields['REASON_CANCELED'] ?? ''),
+                'LOCK_STATUS' => (string)($fields['LOCK_STATUS'] ?? ''),
+            ];
+
+            $payments = [];
+            foreach($order->getPayment() as $payment){
+                $payments[] = [
+                    'ID' => (int)$payment->getId(),
+                    'PAY_SYSTEM_ID' => (int)$payment->getPaymentSystemId(),
+                    'PAID' => (string)$payment->getField('PAID'),
+                    'SUM' => (float)$payment->getSum(),
+                    'PAY_VOUCHER_NUM' => (string)($payment->getField('PAY_VOUCHER_NUM') ?? ''),
+                    'DATE_PAID' => ($payment->getField('DATE_PAID') instanceof \Bitrix\Main\Type\DateTime)
+                        ? $payment->getField('DATE_PAID')->toString() : '',
+                    'PS_STATUS' => (string)($payment->getField('PS_STATUS') ?? ''),
+                ];
+            }
+            $result['PAYMENTS'] = $payments;
+
+            $shipments = [];
+            foreach($order->getShipmentCollection() as $shipment){
+                if((int)$shipment->getSystemShipmentId() > 0 && $shipment->isSystem()) continue;
+                $shipments[] = [
+                    'ID' => (int)$shipment->getId(),
+                    'DELIVERY_ID' => (int)$shipment->getDeliveryId(),
+                    'STATUS_ID' => (string)$shipment->getField('STATUS_ID'),
+                    'DEDUCTED' => (string)$shipment->getField('DEDUCTED'),
+                    'ALLOW_DELIVERY' => (string)$shipment->getField('ALLOW_DELIVERY'),
+                    'PRICE_DELIVERY' => (float)$shipment->getPrice(),
+                    'TRACKING_NUMBER' => (string)($shipment->getField('TRACKING_NUMBER') ?? ''),
+                ];
+            }
+            $result['SHIPMENTS'] = $shipments;
+
+            $basket = [];
+            foreach($order->getBasket() as $item){
+                /** @var \Bitrix\Sale\BasketItem $item */
+                if($item->isBundleParent()) continue;
+                $basket[] = [
+                    'ID' => (int)$item->getId(),
+                    'PRODUCT_ID' => (int)$item->getProductId(),
+                    'NAME' => (string)$item->getField('NAME'),
+                    'SKU' => (string)($item->getField('PRODUCT_XML_ID') ?? ''),
+                    'QUANTITY' => (float)$item->getQuantity(),
+                    'PRICE' => (float)$item->getPrice(),
+                    'DISCOUNT_PRICE' => (float)$item->getDiscountPrice(),
+                    'SUM' => (float)($item->getFinalPrice()),
+                ];
+            }
+            $result['BASKET'] = $basket;
+
+            return ['content'=>[['type'=>'text','text'=>json_encode($result, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)]]];
+        }catch(\Throwable $e){
+            return ['content'=>[['type'=>'text','text'=>'tool orderget error: '.$e->getMessage()]], 'isError'=>true];
+        }
+    }
+
+    /**
+     * Возвращает список статусов заказа (sale) — для выбора STATUS_ID.
+     * color — Y: только статусы с цветом (видимые в админке для смены вручную).
+     */
+    public function orderstatusesAction(string $color = ''): array
+    {
+        try{
+            if(!Loader::includeModule('sale')){
+                return ['content'=>[['type'=>'text','text'=>'Модуль sale не установлен']], 'isError'=>true];
+            }
+            $rows = [];
+            $res = \CSaleStatus::GetList([], [], false, false, ['ID','NAME','SORT','COLOR']);
+            while($row = $res->Fetch()){
+                $name = '';
+                foreach((array)($row['NAME'] ?? []) as $lid=>$val){ $name = (string)$val; }
+                if(is_string($row['NAME'] ?? null) && $row['NAME'] !== '') $name = (string)$row['NAME'];
+                $rows[] = [
+                    'ID' => (string)$row['ID'],
+                    'NAME' => $name,
+                    'SORT' => (int)($row['SORT'] ?? 0),
+                    'COLOR' => (string)($row['COLOR'] ?? ''),
+                ];
+            }
+            if(trim($color) === 'Y'){
+                $rows = array_values(array_filter($rows, function($r){ return $r['COLOR'] !== ''; }));
+            }
+            if(empty($rows)){
+                return ['content'=>[['type'=>'text','text'=>'Статусы не найдены']]];
+            }
+            $out = ['Статусов: '.count($rows)];
+            foreach($rows as $r){
+                $out[] = '['.$r['ID'].'] '.$r['NAME'].' | сортировка: '.$r['SORT'];
+            }
+            return ['content'=>[['type'=>'text','text'=>implode("\n", $out)]]];
+        }catch(\Throwable $e){
+            return ['content'=>[['type'=>'text','text'=>'tool orderstatuses error: '.$e->getMessage()]], 'isError'=>true];
+        }
+    }
+
+    /**
+     * Меняет статус заказа (sale). order_id — ID заказа, status — код статуса (ID из orderstatuses).
+     */
+    public function orderstatusAction(string $order_id, string $status = ''): array
+    {
+        try{
+            if(!Loader::includeModule('sale')){
+                return ['content'=>[['type'=>'text','text'=>'Модуль sale не установлен']], 'isError'=>true];
+            }
+            $orderId = (int)$order_id;
+            if(!$orderId){
+                return ['content'=>[['type'=>'text','text'=>'не указан ID заказа (параметр order_id)']], 'isError'=>true];
+            }
+            $status = trim($status);
+            if($status === ''){
+                return ['content'=>[['type'=>'text','text'=>'не указан код статуса (параметр status), список — инструмент orderstatuses']], 'isError'=>true];
+            }
+
+            $order = \Bitrix\Sale\Order::load($orderId);
+            if(!$order){
+                return ['content'=>[['type'=>'text','text'=>'Заказ не найден: '.$orderId]], 'isError'=>true];
+            }
+            $oldStatus = (string)$order->getField('STATUS_ID');
+            $r = $order->setField('STATUS_ID', $status);
+            if(!$r->isSuccess()){
+                return ['content'=>[['type'=>'text','text'=>'Ошибка установки статуса: '.implode('; ', $r->getErrorMessages())]], 'isError'=>true];
+            }
+            $r = $order->save();
+            if(!$r->isSuccess()){
+                return ['content'=>[['type'=>'text','text'=>'Ошибка сохранения заказа: '.implode('; ', $r->getErrorMessages())]], 'isError'=>true];
+            }
+
+            return ['content'=>[['type'=>'text','text'=>'Заказ #'.$orderId.': статус '.$oldStatus.' → '.$status]]];
+        }catch(\Throwable $e){
+            return ['content'=>[['type'=>'text','text'=>'tool orderstatus error: '.$e->getMessage()]], 'isError'=>true];
+        }
+    }
+
+    /**
+     * Устанавливает оплату заказа (sale). order_id — ID заказа,
+     * paid — Y (оплачен) / N (не оплачен); payment_id — ID конкретной оплаты (опционально, иначе все).
+     */
+    public function orderpayAction(string $order_id, string $paid = 'Y', string $payment_id = ''): array
+    {
+        try{
+            if(!Loader::includeModule('sale')){
+                return ['content'=>[['type'=>'text','text'=>'Модуль sale не установлен']], 'isError'=>true];
+            }
+            $orderId = (int)$order_id;
+            if(!$orderId){
+                return ['content'=>[['type'=>'text','text'=>'не указан ID заказа (параметр order_id)']], 'isError'=>true];
+            }
+            $paid = strtoupper(trim($paid));
+            if($paid !== 'Y' && $paid !== 'N'){
+                return ['content'=>[['type'=>'text','text'=>'параметр paid должен быть Y или N']], 'isError'=>true];
+            }
+            $paymentId = (int)$payment_id;
+
+            $order = \Bitrix\Sale\Order::load($orderId);
+            if(!$order){
+                return ['content'=>[['type'=>'text','text'=>'Заказ не найден: '.$orderId]], 'isError'=>true];
+            }
+            $paymentCollection = $order->getPayment();
+            if(!$paymentCollection || !count($paymentCollection)){
+                return ['content'=>[['type'=>'text','text'=>'У заказа нет оплат']], 'isError'=>true];
+            }
+
+            $changed = [];
+            foreach($paymentCollection as $payment){
+                if($paymentId > 0 && (int)$payment->getId() !== $paymentId) continue;
+                $r = $payment->setPaid($paid);
+                if(!$r->isSuccess()){
+                    return ['content'=>[['type'=>'text','text'=>'Ошибка установки оплаты #'.$payment->getId().': '.implode('; ', $r->getErrorMessages())]], 'isError'=>true];
+                }
+                $changed[] = $payment->getId();
+            }
+            if(empty($changed)){
+                return ['content'=>[['type'=>'text','text'=>'Оплата не найдена: #'.$paymentId]], 'isError'=>true];
+            }
+            $r = $order->save();
+            if(!$r->isSuccess()){
+                return ['content'=>[['type'=>'text','text'=>'Ошибка сохранения заказа: '.implode('; ', $r->getErrorMessages())]], 'isError'=>true];
+            }
+
+            return ['content'=>[['type'=>'text','text'=>'Заказ #'.$orderId.': paid='.$paid.', оплаты: '.implode(', ', $changed)]]];
+        }catch(\Throwable $e){
+            return ['content'=>[['type'=>'text','text'=>'tool orderpay error: '.$e->getMessage()]], 'isError'=>true];
+        }
     }
 }

@@ -65,7 +65,11 @@ class Helper {
             'tools/updateitemfields',
             'tools/addsection',
             'tools/updatesection',
-            'tools/getsection'
+            'tools/getsection',
+            'tools/orders',
+            'tools/orderget',
+            'tools/orderstatus',
+            'tools/orderpay'
         ];
     }
 
