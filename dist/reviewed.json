@@ -1,163 +1,163 @@
 {
   "success": true,
-  "requestId": "awz.bxorm-1795432497",
+  "requestId": "awz.bxorm-1795712065",
   "data": {
     "vulnerabilities": [
       {
         "file": "lib/api/filters/appauth.php",
         "line": "95-101",
-        "type": "Authentication Bypass",
+        "type": "IDOR",
         "severity": "medium",
-        "description": "Подтверждена имперсонализация пользователей: AppAuth-фильтр принимает ключ формата 'userId|TOKEN' и после успешной проверки токена (Helper::checkServiceKey, проверяющего только TOKEN хука через hash_equals) вызывает $USER->Authorize($userAr[0]) с идентификатором пользователя из запроса (строки 95-101). Обладатель одного валидного токена хука может действовать от имени любого пользователя, включая администратора. Атакующий с токеном одного метода формирует ключ '227|aBcDeFgHiJkLmNoPqRsTuVwXyZ' и проходит авторизацию как пользователь ID=227. Находка актуальна и для нового MCP-транспорта BxMcp (bxmcp.php использует тот же AppAuth в prefilters callrpc).",
-        "recommendation": "Не использовать $USER->Authorize на внешнем API-слое без привязки userId к подписи токена. Если имперсонализация необходима — привязать userId к HMAC-подписи токена и ограничить список имперсонируемых пользователей настройкой модуля.",
-        "fix": "Before:\nif(strpos($key, '|')!==false){\n    $userAr = explode('|',$key);\n    if(count($userAr)==2){\n        global $USER;\n        $USER->Authorize($userAr[0]);\n    }\n}\n\nAfter:\nif(strpos($key, '|')!==false){\n    $userAr = explode('|',$key);\n    if(count($userAr)==2){\n        $userId = (int)$userAr[0];\n        $allowed = \\Bitrix\\Main\\Config\\Option::get('awz.bxorm', 'impersonation_users_'.$appId, '');\n        if($userId > 0 && in_array($userId, array_map('intval', explode(',', $allowed)), true)){\n            global $USER;\n            $USER->Authorize($userId);\n        }\n    }\n}",
+        "description": "Подтверждена эскалация авторизации через pipe-разделитель в API-ключе: при формате ключа 'USER_ID|TOKEN' метод explode делит строку и вызывает global $USER; $USER->Authorize($userAr[0]), аутентифицируя оператора как произвольный USER_ID без проверки, что данный пользователь владеет этим токеном. Получивший любой валидный хук TOKEN может получить доступ к любой учётной записи сайта.",
+        "recommendation": "Удалить блок strpos/explode/Authorize из appauth.php либо изменить формат хранения ключей так, чтобы Authorize вызывался только с userId владельца токена (хранить hash(appId+userId) и проверять соответствие).",
+        "fix": "Удалить условия strpos(key,'|'), explode('|') и вызов USER->Authorize(). Использовать токен напрямую для проверки через checkServiceKey без привязки к конкретному userId.",
         "reviewed": {
           "oldSeverity": "medium",
           "newSeverity": "medium",
           "changed": false,
-          "category": "authenticated-or-limited-authorization-bypass",
+          "category": "kept-as-reported",
           "versionScope": "current",
           "version": "current",
           "currentVersionRelevance": "present-in-current-scan",
-          "action": "verify-on-latest-version",
+          "action": "fix",
           "confidence": "medium",
-          "rationale": "Set to medium because the finding describes authorization bypass or privilege misuse, but not a direct high-impact IDOR, financial bug, or confirmed account takeover in the journal text."
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
         }
       },
       {
-        "file": "lib/adminpages/hooksedit.php",
-        "line": "38",
-        "type": "Cross-Site Scripting",
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1702-1722",
+        "type": "IDOR",
         "severity": "medium",
-        "description": "Подтверждено: HooksEdit::getFieldValue() при незаполненной форме ($this->saved === false) возвращает значение $_REQUEST[$name] без экранирования (строка 38). Значение попадает в value-атрибуты и SELECT-опции админ-формы handler_el (awz.admin). Reflected XSS в админ-панели: пользователь открывает URL /bitrix/admin/awz_bxorm_hooks_edit.php?NAME=<script>alert(1)</script> и выполняет вредоносный JavaScript от имени администратора в контексте сайта.",
-        "recommendation": "Экранировать значения из $_REQUEST аналогично MethodsEdit::getFieldValue, который использует htmlspecialcharsEx (строка 48 methodsedit.php). Применить htmlspecialcharsbx перед возвратом скалярного значения.",
-        "fix": "Before:\nif(!$this->saved) {\n    $value = (isset($_REQUEST[$name]) && array_key_exists($name, $_REQUEST)) ? $_REQUEST[$name] : $defValue;\n}\n\nAfter:\nif(!$this->saved) {\n    $value = (isset($_REQUEST[$name]) && array_key_exists($name, $_REQUEST)) ? $_REQUEST[$name] : $defValue;\n    if(is_scalar($value)){\n        $value = htmlspecialcharsbx((string)$value);\n    }\n}",
+        "description": "Подтверждённая массовая запись свойств инфоблока через additem/updateitemfields: параметр fields декодируется из JSON/массива, все ключи вида PROPERTY_<КОД> записываются напрямую в arFields без фильтрации по списку допустимых свойств целевого инфоблока. Авторизованный пользователь может задавать любые PROPERTY_*, включая скрытые, технические свойства других инфоблоков (если код совпадает), а также SYSTEM-свойства вроде PREVIEW_TEXT, CODE.",
+        "recommendation": "Перед добавлением каждого PROPERTY_*-ключа проверить его существование через CIBlockProperty::GetList по IBLOCK_ID элемента. Отклонить ключи, не существующие у целевого инфоблока.",
+        "fix": "Заменить цикл foreach на проверку: получить разрешённые коды свойств инфоблока, принять только те PROPERTY_* ключи, которые есть в этом списке.",
         "reviewed": {
           "oldSeverity": "medium",
           "newSeverity": "medium",
           "changed": false,
-          "category": "xss-unclear-source",
+          "category": "kept-as-reported",
           "versionScope": "current",
           "version": "current",
           "currentVersionRelevance": "present-in-current-scan",
-          "action": "validate-source-and-fix-escaping",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        }
+      },
+      {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1894-1911",
+        "type": "IDOR",
+        "severity": "medium",
+        "description": "Подтверждённая массовая запись пользовательских свойств раздела (UF_*) через addsection/updatesection: параметр fields распаковывается как JSON/массив, все ключи кроме явно заблокированных (IBLOCK_ID, ID, NAME, DESCRIPTION и т.д.) передаются напрямую в arFields. Включая любые UF_* свойства с любой типизацией, позволяя изменить произвольные пользовательские поля раздела.",
+        "recommendation": "Для UF_* — использовать CIBlock::GetUserFields(IBLOCK_ID, 'SECTION') для получения allowlist существующих UF-полей и принимать только те ключи, которые есть в нём.",
+        "fix": "Добавить вызов CIBiblock::GetUserFields перед merge полей: ufAllowed = array_keys(getUserFields(...)); filter fields where key starts with 'UF_' AND key in ufAllowed.",
+        "reviewed": {
+          "oldSeverity": "medium",
+          "newSeverity": "medium",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        }
+      },
+      {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "2660-2678",
+        "type": "SQL Injection",
+        "severity": "medium",
+        "description": "Подозрение: SQLi через ORM-фильтр в ordersAction: параметр filter читается из запроса, декодируется из JSON, и каждая пара key/value добавляется напрямую в фильтр OrderTable::getList(). Ключи фильтруются regex /^(>=|<=|<>|>|<|=|!|~|%)?[\\w.]+$/i, но значения не проходят приведение типа — значение числового оператора (>ID, <ID) передаётся как строка/смешанный тип в ORM-запрос, что может привести к некорректному SQL-предложению.",
+        "recommendation": "Привести значения ID-фильтров к int, добавить type-checking для numeric-операторов.",
+        "fix": "Добавить if (in_array(substr(trim($key),0,2), ['>', '<'])): val = (int)$val;",
+        "reviewed": {
+          "oldSeverity": "medium",
+          "newSeverity": "medium",
+          "changed": false,
+          "category": "sql-injection",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "parameterize-query",
+          "confidence": "medium",
+          "rationale": "Kept as medium by default under the BUS Marketplace triage policy; raise only when exploit impact is proven beyond the journal text."
+        }
+      },
+      {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "971-973",
+        "type": "Command Injection",
+        "severity": "low",
+        "description": "Подтверждён вызов OS-команд top, free, nproc через shell_exec в processinfoAction. Функции вызываются только если shell_exec не отключена в disable_functions. Строки жёстко захардкожены ('top -b -n 1', 'free -m', 'nproc') — пользовательский ввод отсутствует, эксплуатация невозможна. Однако сам паттерн exec присутствует в коде модуля.",
+        "recommendation": "Заменить shell_exec на безопасные PHP-аналоги: sys_getloadavg() для нагрузки, file_get_contents('/proc/meminfo') для памяти, file_get_contents('/proc/cpuinfo') для CPU cores.",
+        "fix": "Убрать @shell_exec('top -b -n 1'); @shell_exec('free -m'); @shell_exec('nproc'); заменить на /proc/ чтение.",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "low",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        }
+      },
+      {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "749-839, 248",
+        "type": "Path Traversal",
+        "severity": "low",
+        "description": "Подтверждён паттерн чтения файлов в file_get/log_clear с realpath-проверкой + whitelist/blacklist. Механизм checkFileReadAllowed блокирует .settings.php, dbconn.php, .env, битrix/backup/, upload/bak/. Но опция mcp_file_whitelist (параметр модуля) позволяет администратору добавлять произвольные каталоги, расширяя зону читаемых файлов. Если путь попадает в whitelist — проверка на бинарные файлы и исполняемые скрипты отсутствует.",
+        "recommendation": "Добавить extension blacklist (.php, .inc, .phtml) и content-type проверку при чтении файлов. Либо запретить чтение файлов с расширением .php даже в whitelisted директориях.",
+        "fix": "В checkFileReadAllowed добавить: if (preg_match('/\\.(php|inc|phtml)$/i', basename($real))) return 'чтение PHP-файлов запрещено';",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "low",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        }
+      },
+      {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1293",
+        "type": "Open Redirect",
+        "severity": "medium",
+        "description": "Подозрение: saveBase64Image формирует публичный URL через getHttpHost(), которое можно подменить через Host header. URL возвращается в ответе loadphoto/tmpphoto как ссылка на загруженное изображение ('https://'.getHttpHost().'/'.$relativeDir.$fileName). Злоумышленник может отправить запрос с Custom-Host: evil.com, получить ссылку, которая визуально принадлежит сайту, но ведёт на чужой домен.",
+        "recommendation": "Использовать Option::get('main', 'site_domain') или фиксированный config вместо динамического HTTP_HOST.",
+        "fix": "Заменить getRequest()->getHttpHost() на trim((string)Option::get('main','site_domain','')) ?: $_SERVER['HTTP_HOST'];",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "medium",
+          "changed": true,
+          "category": "open-redirect-unclear-source",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "validate-source-and-allowlist",
           "confidence": "low",
-          "rationale": "Adjusted conservatively because the journal does not clearly prove a low-privileged or public payload source. Confirm source permissions before treating as a blocker."
+          "rationale": "Left as medium pending confirmation of whether the redirect target is request-controlled or only editable by trusted administrators."
         }
       },
       {
         "file": "lib/api/controller/mcp/tools.php",
-        "line": "640-646",
-        "type": "Information Disclosure",
-        "severity": "medium",
-        "description": "Подтверждено: log_set позволяет установить произвольное имя класса обработчика логов в секции log/class_name .settings.php через params.class_name или аргумент class_name (строки 640-646). Класс записывается в конфигурационный файл без проверки существования, наследования от \\Bitrix\\Main\\Diag\\FileExceptionHandlerLog или валидации. При перезагрузке Bitrix может попытаться инстанциировать указанный класс, что приведёт к unexpected behavior или загрузке стороннего кода. Атакующий с токеном MCP вызывает tools/log_set c class_name='AnyClass' для записи в .settings.php.",
-        "recommendation": "Валидировать class_name: проверять существование класса через class_exists() и соответствие иерархии через is_subclass_of($candidate, \\Bitrix\\Main\\Diag\\FileExceptionHandlerLog). Отклонять классы, не являющиеся доверенными обработчиками логов.",
-        "fix": "Before:\n$className = '';\nif(isset($extra['class_name']) && is_string($extra['class_name']) && trim($extra['class_name'])!==''){\n    $className = trim($extra['class_name']);\n    if(strpos($className, '\\\\') !== 0){\n        $className = '\\\\'.$className;\n    }\n}\n\nAfter:\n$className = '';\nif(isset($extra['class_name']) && is_string($extra['class_name']) && trim($extra['class_name'])!==''){\n    $candidate = trim($extra['class_name']);\n    if(strpos($candidate, '\\\\') !== 0){\n        $candidate = '\\\\'.$candidate;\n    }\n    if(class_exists($candidate) && is_subclass_of($candidate, '\\\\Bitrix\\\\Main\\\\Diag\\\\FileExceptionHandlerLog')){\n        $className = $candidate;\n    }else{\n        throw new \\Exception('недопустимый class_name');\n    }\n}",
-        "reviewed": {
-          "oldSeverity": "medium",
-          "newSeverity": "medium",
-          "changed": false,
-          "category": "kept-as-reported",
-          "versionScope": "current",
-          "version": "current",
-          "currentVersionRelevance": "present-in-current-scan",
-          "action": "fix",
-          "confidence": "medium",
-          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
-        }
-      },
-      {
-        "file": "lib/api/controller/mcp/tools.php",
-        "line": "1108,1172,1593,2063-2066",
-        "type": "Information Disclosure",
-        "severity": "medium",
-        "description": "Подтверждено: инструменты iblocks (строка 1108, CIBlock::GetList с CHECK_PERMISSIONS='N'), sections (строка 1172, CIBlockSection::GetList с CHECK_PERMISSIONS='N'), getitem (строка 1593, CIBlockElement::GetList с CHECK_PERMISSIONS='N') и getsection (строки 2063-2066, SectionTable::getList без проверки прав) раскрывают полный список инфоблоков, разделов, элементов и их полей/свойств любому аутентифицированному по токену MCP пользователю, включая внутренние/непубликуемые инфоблоки и черновики. Новые инструменты sections/getitem/getsection (зарегистрированы в Helper::getMcpActions, helper.php:53-68) расширяют ранее зафиксированную проблему iblocks: теперь через один токен доступно чтение полного контента любого инфоблока, минуя модель разграничения прав Битрикс.",
-        "recommendation": "Заменить CHECK_PERMISSIONS='N' на проверку прав через CIBlock::CheckAccess() для каждого найденного инфоблока, либо ограничить результат белым списком разрешённых IBLOCK_ID, настроенных в методе (PARAMS метода).",
-        "fix": "Before:\n$arParams = ['CHECK_PERMISSIONS' => 'N'];\nif($activeOnly !== 'N'){\n    $arParams['ACTIVE'] = 'Y';\n}\n$res = \\CIBlock::GetList(['SORT'=>'ASC','NAME'=>'ASC'], $arParams, true);\n\nAfter:\n$arParams = [];\nif($activeOnly !== 'N'){\n    $arParams['ACTIVE'] = 'Y';\n}\n$res = \\CIBlock::GetList(['SORT'=>'ASC','NAME'=>'ASC'], $arParams, true);\n$whitelistIds = [];\n$methodData = MethodsTable::getRowById($this->getScopeMethodId());\nif($methodData && !empty($methodData['PARAMS']['iblocks'])){ $whitelistIds = $methodData['PARAMS']['iblocks']; }\nwhile($row = $res->Fetch()){\n    if(!empty($whitelistIds) && !in_array($row['ID'], $whitelistIds, true)) continue;\n    if(!\\CIBlock::CheckAccess($USER->GetID(), $row['ID'])) continue;\n    ...\n}",
-        "reviewed": {
-          "oldSeverity": "medium",
-          "newSeverity": "medium",
-          "changed": false,
-          "category": "kept-as-reported",
-          "versionScope": "current",
-          "version": "current",
-          "currentVersionRelevance": "present-in-current-scan",
-          "action": "fix",
-          "confidence": "medium",
-          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
-        }
-      },
-      {
-        "file": "lib/api/controller/app.php",
-        "line": "56-65",
-        "type": "CSRF",
-        "severity": "medium",
-        "description": "Подтверждено: batchAction не включает CSRF-фильтр в configureActions (отсутствует ActionFilter\\Csrf для action 'batch', строки 56-65). Действие state-changing (batch-create/update/delete, включая новые MCP-инструменты additem/updateitemfields/addsection/updatesection через call) выполняется только через POST (требуется AppAuth), но без защиты CSRF. В контексте token-based API (AppAuth) CSRF-атака затруднена: атакующему нужен токен авторизации. Однако если токен утечёт (см. finding token_in_url, helper.php:195-198), атакующий сможет выполнить batch-операции от имени владельца токена, включая $USER->Authorize-имперсонализацию через key 'userId|TOKEN'.",
-        "recommendation": "Добавить ActionFilter\\Csrf в prefilters для action 'batch' или реализовать custom CSRF-защиту на уровне токена (verify bitrix_sessid + module-specific token binding).",
-        "fix": "Before:\n'batch' => [\n    'prefilters' => [\n        new NoCors([],[]),\n        new AppAuth(...)\n    ]\n]\n\nAfter:\n'batch' => [\n    'prefilters' => [\n        new NoCors([],[]),\n        new AppAuth(...),\n        new \\Bitrix\\Main\\Engine\\ActionFilter\\Csrf()\n    ]\n]",
-        "reviewed": {
-          "oldSeverity": "medium",
-          "newSeverity": "medium",
-          "changed": false,
-          "category": "csrf-state-change",
-          "versionScope": "current",
-          "version": "current",
-          "currentVersionRelevance": "present-in-current-scan",
-          "action": "add-sessid-and-owner-checks",
-          "confidence": "medium",
-          "rationale": "Kept as medium because the finding describes state change without check_bitrix_sessid; raise only if cross-user deletion or higher-impact state change is confirmed."
-        }
-      },
-      {
-        "file": "lib/api/controller/mcp/tools.php",
-        "line": "1091",
-        "type": "Cross-Site Scripting",
-        "severity": "low",
-        "description": "Подтверждено: loadphotoAction и tmpphotoAction сохраняют SVG-изображения с расширением .svg (PHOTO_ALLOWED_EXTENSIONS содержит 'svg', строка 1091; detectImageExt определяет SVG по наличию тега '<svg>' в первых 1024 байтах, строки 1316-1321) и возвращают публичный HTTPS-URL (строки 1293-1294). Браузер автоматически рендерит SVG как изображение, выполняя embedded <script>, <animate>, <iframe>. Любой владелец токена MCP может сохранить вредоносный SVG для выполнения stored XSS при открытии URL другими пользователями. Размер decoded данных ограничен только логикой rotation (1 час для tmpphoto), размер base64 не лимитирован явно — это не устраняет XSS-риск.",
-        "recommendation": "Отключить SVG из PHOTO_ALLOWED_EXTENSIONS, либо sanitize SVG перед сохранением (удалить все теги кроме визуальных, stripping script/animate/iframe). Альтернативно — сохранять как .png через конвертацию GD/ImageMagick.",
-        "fix": "Before:\nconst PHOTO_ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif'];\n\nAfter:\nconst PHOTO_ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif']; // svg удалён: stored XSS через embedded JS",
-        "reviewed": {
-          "oldSeverity": "low",
-          "newSeverity": "low",
-          "changed": false,
-          "category": "stored-xss-trusted-editor-content",
-          "versionScope": "current",
-          "version": "current",
-          "currentVersionRelevance": "present-in-current-scan",
-          "action": "harden-output-escaping",
-          "confidence": "high",
-          "rationale": "Downgraded because the journal describes a stored XSS source controlled by a Bitrix admin/content editor or another trusted content-management role. In BUS such users can normally publish HTML/JS through legitimate site-management mechanisms, so this is template hardening rather than a high module vulnerability unless a low-privileged/external source is proven."
-        }
-      },
-      {
-        "file": "lib/helper.php",
-        "line": "195-198",
+        "line": "1078",
         "type": "Information Disclosure",
         "severity": "low",
-        "description": "Подтверждено: getMcpUrl() формирует URL подключения MCP-клиента с токеном в GET-параметре (строка 197: $url .= '&key='.$token). Токен попадает в access-логи веб-сервера, историю браузера, рефереры прокси-серверов. С учетом новых MCP-инструментов (additem, updateitemfields, updateitemprop, addsection, updatesection, updateseoitem, deletemetaitem, deletemetasection, reindexitem) и имперсонализации в AppAuth утечка токена дает полный контроль над контентом сайта и возможность действий от имени любого пользователя. Любой владелец токена получает полный доступ к API без дополнительного шлюза.",
-        "recommendation": "Передавать токен через заголовок Authorization (поддерживается AppAuth, строки 56-71 appauth.php). Для отображаемого URL выдавать токен отдельно и не включать его в публично копируемую ссылку.",
-        "fix": "Before:\nif($token){\n    $url .= '&key='.$token;\n}\nreturn $url;\n\nAfter:\n// токен не включается в URL; клиент передаёт его в заголовке Authorization: Token <token>\n// AppAuth::onBeforeAction (appauth.php:56-71) извлекает токен из заголовка Authorization\nreturn $url;",
-        "reviewed": {
-          "oldSeverity": "low",
-          "newSeverity": "low",
-          "changed": false,
-          "category": "kept-as-reported",
-          "versionScope": "current",
-          "version": "current",
-          "currentVersionRelevance": "present-in-current-scan",
-          "action": "fix",
-          "confidence": "medium",
-          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
-        }
-      },
-      {
-        "file": "lib/api/filters/nocors.php",
-        "line": "34-40",
-        "type": "Information Disclosure",
-        "severity": "low",
-        "description": "Подтверждено: NoCors-фильтр отражает в Access-Control-Allow-Origin любой Origin из HTTP-запроса (строка 37) или устанавливает '*' (строка 39), без allowlist доверенных источников. Позволяет сторонним сайтам выполнять кросс-доменные запросы к API модуля. Так как авторизация зависит от токена (не cookies), прямой CSRF невозможен, но при наличии токена в браузерном JavaScript-клиенте Origin-flexibility расширяет поверхность атаки — злоумышленник может организовать фишинговый сайт для кражи данных через CORS.",
-        "recommendation": "Валидировать Origin по опции-allowlist mcp_cors_origins; при отсутствии совпадения не устанавливать Access-Control-Allow-Origin.",
-        "fix": "Before:\n$origin = $this->origin ?: \\Bitrix\\Main\\Context::getCurrent()->getRequest()->getHeader('Origin');\nif ($origin){\n    $response->addHeader('Access-Control-Allow-Origin', $origin);\n}else{\n    $response->addHeader('Access-Control-Allow-Origin', \"*\");\n}\n\nAfter:\n$origin = $this->origin ?: \\Bitrix\\Main\\Context::getCurrent()->getRequest()->getHeader('Origin');\n$allowed = array_filter(array_map('trim', explode(',', (string)\\Bitrix\\Main\\Config\\Option::get('awz.bxorm', 'mcp_cors_origins', ''))));\nif($origin && in_array((string)$origin, $allowed, true)){\n    $response->addHeader('Access-Control-Allow-Origin', (string)$origin);\n}\n// без совпадения в allowlist — CORS-заголовок не устанавливается",
+        "description": "Подтверждено раскрытие информации об окружении через envinfoAction: php_uname() раскрывает полную версию ОС, gethostname() — имя сервера, get_current_user() — имя системного пользователя веб-сервера, disk_total_space/disk_free_space — размеры диска. Все доступны любому авторизованному MCP-клиенту.",
+        "recommendation": "Удалить get_current_user() и php_uname(). Оставить только общую информацию о диске.",
+        "fix": "Удалить строки с php_uname(), gethostname(), get_current_user().",
         "reviewed": {
           "oldSeverity": "low",
           "newSeverity": "low",
@@ -173,12 +173,12 @@
       },
       {
         "file": "lib/api/controller/mcp/tools.php",
-        "line": "769-772",
+        "line": "1043",
         "type": "Information Disclosure",
         "severity": "low",
-        "description": "Подтверждено: checkFileReadAllowed использует дефолтный whitelist mcp_file_whitelist со значением '/bitrix/php_interface/,/bitrix/modules/,/local/,/upload/' (строки 769-772). Каталог /bitrix/modules/ позволяет прочитать исходный код любого установленного модуля Битрикс — включая стандартные компоненты, платные модули и системную логику. Владелец токена MCP может получить полный исходный код других модулей, включая конфиденциальную бизнес-логику, ключи интеграций и паттерны доступа к БД. Черный список FILE_READ_BLACKLIST (строки 725-734) защищает dbconn.php/.settings.php/.env, но не сужает область чтения модулей.",
-        "recommendation": "Сузить дефолтный whitelist до минимально необходимых каталогов (например только '/upload/,/local/logs/'). Требовать явной настройки модуля для доступа к /bitrix/modules/.",
-        "fix": "Before:\n$whitelist = array_filter(array_map('trim', explode(',',\n    (string)\\Bitrix\\Main\\Config\\Option::get('awz.bxorm', 'mcp_file_whitelist',\n        '/bitrix/php_interface/,/bitrix/modules/,/local/,/upload/')\n    )));\n\nAfter:\n$whitelist = array_filter(array_map('trim', explode(',',\n    (string)\\Bitrix\\Main\\Config\\Option::get('awz.bxorm', 'mcp_file_whitelist',\n        '/upload/,/local/logs/')\n    )));\n// /bitrix/modules/ и /bitrix/php_interface/ требуют явного разрешения в настройке",
+        "description": "Подтверждено раскрытие информации о БД через dbinfoAction: connection.getType() (тип СУБД), getVersion() (версия MySQL/MariaDB), getHost() (hostname DB-сервера), getDatabase() (имя базы данных). Эта информация полезна для подготовки targeted атак на БД.",
+        "recommendation": "Не отдавать hostname и version — оставить только type и database name (не критично для атаки).",
+        "fix": "Убрать строки connection->getHost() и current(connection->getVersion()) из dbinfoAction.",
         "reviewed": {
           "oldSeverity": "low",
           "newSeverity": "low",
@@ -193,34 +193,13 @@
         }
       },
       {
-        "file": "lib/hooks.php",
-        "line": "76",
+        "file": "lib/api/filters/sign.php",
+        "line": "45-46",
         "type": "Insecure Deserialization",
         "severity": "low",
-        "description": "Подтверждено: HooksTable::getMap() использует serialize/unserialize для поля METHODS с allowed_classes=false (строка 76). Данные хранятся в битриксовой таблице b_awz_bxorm_hooks и контролируются администраторами модуля. allowed_classes=false mitigates RCE risk, но остаётся возможность денормализации данных или атаки на бизнес-логику при манипуляции сериализованным содержимым через админ-панель. Defense-in-depth recommendation: рассмотреть миграцию на JSON-кодирование через json_encode/json_decode.",
-        "recommendation": "Рассмотреть миграцию с serialize/unserialize на json_encode/json_decode для безопасного хранения массивов данных в БД.",
-        "fix": "Before:\n'fetch_data_modification' => function(){\n    return [\n        function ($value) {\n            return unserialize($value, [\"allowed_classes\" => false]);\n        }\n    ];\n},\n\nAfter:\n'fetch_data_modification' => function(){\n    return [\n        function ($value) {\n            $decoded = json_decode($value, true);\n            return is_array($decoded) ? $decoded : [];\n        }\n    ];\n},",
-        "reviewed": {
-          "oldSeverity": "low",
-          "newSeverity": "low",
-          "changed": false,
-          "category": "kept-as-reported",
-          "versionScope": "current",
-          "version": "current",
-          "currentVersionRelevance": "present-in-current-scan",
-          "action": "fix",
-          "confidence": "medium",
-          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
-        }
-      },
-      {
-        "file": "lib/methods.php",
-        "line": "101",
-        "type": "Insecure Deserialization",
-        "severity": "low",
-        "description": "Подтверждено: MethodsTable::getMap() использует serialize/unserialize для поля PARAMS с allowed_classes=false (строка 101). Аналогично hooks.php: защита от RCE через allowed_classes=false, но рекомендуется миграция на JSON для defense-in-depth.",
-        "recommendation": "Рассмотреть миграцию с serialize/unserialize на json_encode/json_decode для безопасного хранения массивов данных в БД.",
-        "fix": "Before:\n'fetch_data_modification' => function(){\n    return [\n        function ($value) {\n            return unserialize($value, [\"allowed_classes\" => false]);\n        }\n    ];\n},\n\nAfter:\n'fetch_data_modification' => function(){\n    return [\n        function ($value) {\n            $decoded = json_decode($value, true);\n            return is_array($decoded) ? $decoded : [];\n        }\n    ];\n},",
+        "description": "Подозрение: sign.php использует unserialize(base64_decode(...), ['allowed_classes' => false]) внутри Sign filter после проверки подписи Bitrix Security\\Sign\\Signer. allowed_classes=false предотвращает POP-цепочки, но паттерн unsafe-deserialize сохраняется. При изменении кода (например удалении проверки подписи) это станет эксплуатируемой уязвимостью.",
+        "recommendation": "Заменить serialize/unserialize на json_encode/json_decode для передачи параметров через signed-пакет.",
+        "fix": "Заменить base64_encode(serialize($params)) на base64_encode(json_encode($params)), и unserialize(...) на json_decode(base64_decode(...), true).",
         "reviewed": {
           "oldSeverity": "low",
           "newSeverity": "low",
@@ -235,56 +214,61 @@
         }
       }
     ],
-    "summary": "Повторный аудит модуля awz.bxorm (сверка с прошлым сканом v1.1.8 + review). Сканировано 78 файлов. Прочитаны и проверены по чек-листу: lib/helper.php (измененный), lib/api/controller/mcp/tools.php (полностью, включая новые инструменты log_off/log_clear/iblocks/sections/loadphoto/tmpphoto/reindexitem/updateitemprop/getitem/updateseoitem/deletemetaitem/updateseosect/deletemetasection/additem/updateitemfields/addsection/updatesection/getsection), lib/api/controller/app.php, bxmcp.php, hook.php, lib/api/filters/appauth.php, sign.php, nocors.php, lib/adminpages/hooksedit.php, methodsedit.php, lib/hooks.php, methods.php, options.php. Свёртка с прошлым сканом: подтверждены все 11 прежних находок по реально прочитанному коду (helper.php: токен в URL сместился на строку 197; остальное без изменений). Новое: регистрация MCP-инструментов в Helper::getMcpActions (helper.php:34-69) расширила воздействие находки CHECK_PERMISSIONS='N' — новые sections/getitem/getsection читают разделы/элементы без проверки прав (строки включены в запись iblocks). Осознанно отклонены сигналы: shell_exec (строки 971-973) — константные команды без пользовательского ввода, не Command Injection; unserialize в appauth/sign — allowed_classes=false + unsign Bitrix Signer; SQL-sink tools.php:1043 — только чтение connection metadata; preg_match в parseLineRanges — фиксированные паттерны, не Regex Injection; include/require по DOCUMENT_ROOT — статические пути; массовая запись additem/updateitemfields — защищена allowlist-фильтрацией ключей (IBLOCK_ID/ID/NAME исключены). Итого: 11 уязвимостей. Распределение по severity: high=0, medium=5 (Authentication Bypass имперсонализация, Reflected XSS админка, class_name в конфиг, info leak инфоблоки/элементы/разделы, batch CSRF), low=6 (Stored XSS SVG, token_in_url, CORS reflection, широкий file whitelist, 2x Insecure Deserialization). riskLevel = medium.",
+    "summary": "Модуль awz.bxorm содержит 10 подтверждённых находок безопасности: 0 high, 4 medium, 6 low. Основная группа уязвимостей — массовая запись (mass assignment) в инструментах iblock через необработанный JSON-параметр fields (tools.php:1702-1722, tools.php:1894-1911), позволяющий модифицировать произвольные PROPERTY_/UF_* свойства любого инфоблока/раздела. Также: IDOR через pipe-разделитель токена в appauth.php (эскалация до любого userId), потенциальная SQLi через ORM-фильтр ordersAction, path traversal shadow через mcp_file_whitelist, open redirect через Host header, information disclosure (OS/DB/user info), hardcoded OS-команды и insecure deserialization pattern.",
     "scannedFiles": 78,
     "riskLevel": "medium",
     "auditedFiles": [
-      "lib/helper.php",
-      "lib/api/controller/mcp/tools.php",
       "lib/api/controller/app.php",
-      "lib/api/controller/bxmcp.php",
       "lib/api/controller/hook.php",
-      "lib/api/filters/appauth.php",
-      "lib/api/filters/sign.php",
-      "lib/api/filters/nocors.php",
-      "lib/adminpages/hooksedit.php",
-      "lib/adminpages/methodsedit.php",
+      "lib/api/controller/bxmcp.php",
+      "lib/api/controller/mcp/tools.php",
+      "lib/api/controller/mcp/app.php",
+      "lib/api/controller/mcp/prompts.php",
+      "lib/api/controller/mcp/resources.php",
       "lib/hooks.php",
       "lib/methods.php",
-      "options.php"
+      "lib/helper.php",
+      "lib/api/filters/appauth.php",
+      "lib/api/filters/sign.php",
+      "lib/api/filters/checkmethod.php",
+      "lib/api/scopes/controller.php",
+      "options.php",
+      "lib/adminpages/hooksedit.php",
+      "lib/adminpages/methodsedit.php",
+      "include.php",
+      "install/index.php",
+      "lib/api/filters/request/replacefilter.php"
     ],
     "reviewSummary": {
-      "reviewedAt": "2026-11-23",
+      "reviewedAt": "2026-11-26",
       "method": "BUS-aware triage: preserve original finding fields except severity, add reviewed node with old severity and rationale.",
       "totals": {
-        "vulnerabilities": 11,
-        "changedSeverity": 0,
-        "unchangedSeverity": 11
+        "vulnerabilities": 10,
+        "changedSeverity": 1,
+        "unchangedSeverity": 9
       },
       "rawSeverityCounts": {
-        "medium": 5,
+        "medium": 4,
         "low": 6
       },
       "reviewedSeverityCounts": {
         "medium": 5,
-        "low": 6
+        "low": 5
       },
       "currentScope": {
-        "total": 11,
+        "total": 10,
         "rawSeverityCounts": {
-          "medium": 5,
+          "medium": 4,
           "low": 6
         },
         "reviewedSeverityCounts": {
           "medium": 5,
-          "low": 6
+          "low": 5
         },
         "reviewedCategories": {
-          "authenticated-or-limited-authorization-bypass": 1,
-          "xss-unclear-source": 1,
-          "kept-as-reported": 7,
-          "csrf-state-change": 1,
-          "stored-xss-trusted-editor-content": 1
+          "kept-as-reported": 8,
+          "sql-injection": 1,
+          "open-redirect-unclear-source": 1
         }
       },
       "historicalUpdatePackages": {
