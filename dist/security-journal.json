@@ -5,15 +5,15 @@
   },
   "current_state": {
     "status": "needs_review",
-    "last_run_id": "awz.bxorm-1795748238",
+    "last_run_id": "awz.bxorm-1795783735",
     "archive_sha256": null,
-    "open_findings": 11,
+    "open_findings": 13,
     "blocking_findings_open": 0,
     "false_positive_findings": 0,
     "accepted_risk_findings": 0,
-    "fixed_findings": 70,
+    "fixed_findings": 81,
     "removed_findings": 5,
-    "total_findings": 86
+    "total_findings": 99
   },
   "runs": [
     {
@@ -252,6 +252,24 @@
         "still_open_findings": 1,
         "reopened_findings": 0,
         "resolved_since_previous_run": 9
+      }
+    },
+    {
+      "run_id": "awz.bxorm-1795783735",
+      "created_at": "2026-11-27T09:55:17+00:00",
+      "archive_sha256": null,
+      "scanner_request_id": "awz.bxorm-1795783735",
+      "input_summary": "Модуль awz.bxorm содержит 12 подтверждённых и 3 подозрения общей безопасности. Максимальная severity: medium. Сравнительно с reviewed.json v1.1.15: все 11 предыдущих находок подтверждены по текущему коду — ни одна не исправлена в v1.1.16. Добавлено 3 новых находки: CORS Origin Reflection (nocors.php:33-39), CSRF отсутствие HttpMethod POST (tools.php actions), Configuration Manipulation через log_set params (tools.php:477-550). Open Redirect ранее был classified как suspicious — сохранён как подтверждённый паттерн (host header可控). Group info disclosure включает 5 endpoints (cmsinfo, dbinfo, phpinfo, envinfo, processinfo). Authentication Bypass через pipe-токен остаётся наиболее существенной находкой.",
+      "summary": {
+        "current_scan_findings": 13,
+        "severity_counts": {
+          "medium": 5,
+          "low": 8
+        },
+        "new_findings": 13,
+        "still_open_findings": 0,
+        "reopened_findings": 0,
+        "resolved_since_previous_run": 11
       }
     }
   ],
@@ -5678,18 +5696,15 @@
       "fingerprint": "2b8be0f8ea5cc03ee36f1e6e71a8b88c",
       "type": "Insecure Deserialization",
       "severity": "low",
-      "status": "open",
+      "status": "fixed",
       "first_seen_run_id": "awz.bxorm-1795712065",
       "last_seen_run_id": "awz.bxorm-1795748238",
-      "resolved_run_id": null,
+      "resolved_run_id": "awz.bxorm-1795783735",
       "original_location": {
         "file": "lib/api/filters/sign.php",
         "line": "45-46"
       },
-      "current_location": {
-        "file": "lib/api/filters/sign.php",
-        "line": "45-46"
-      },
+      "current_location": null,
       "latest_vulnerability": {
         "file": "lib/api/filters/sign.php",
         "line": "45-46",
@@ -5731,26 +5746,34 @@
             "line": "45-46"
           },
           "status": "open"
+        },
+        {
+          "run_id": "awz.bxorm-1795783735",
+          "event": "resolved",
+          "at": "2026-11-27T09:55:17+00:00",
+          "status": "fixed"
         }
-      ]
+      ],
+      "resolution": {
+        "type": "not_reproduced_after_rescan",
+        "resolved_in_run": "awz.bxorm-1795783735",
+        "reason": "The reviewed scan no longer reports a matching finding for the current archive."
+      }
     },
     {
       "journal_finding_id": "JF-00077",
       "fingerprint": "1cc0c8a69b16f68ba291069b4d25f4c9",
       "type": "Authentication Bypass",
       "severity": "medium",
-      "status": "open",
+      "status": "fixed",
       "first_seen_run_id": "awz.bxorm-1795748238",
       "last_seen_run_id": "awz.bxorm-1795748238",
-      "resolved_run_id": null,
+      "resolved_run_id": "awz.bxorm-1795783735",
       "original_location": {
         "file": "lib/api/filters/appauth.php",
         "line": "95-108"
       },
-      "current_location": {
-        "file": "lib/api/filters/appauth.php",
-        "line": "95-108"
-      },
+      "current_location": null,
       "latest_vulnerability": {
         "file": "lib/api/filters/appauth.php",
         "line": "95-108",
@@ -5782,26 +5805,34 @@
             "line": "95-108"
           },
           "status": "open"
+        },
+        {
+          "run_id": "awz.bxorm-1795783735",
+          "event": "resolved",
+          "at": "2026-11-27T09:55:17+00:00",
+          "status": "fixed"
         }
-      ]
+      ],
+      "resolution": {
+        "type": "not_reproduced_after_rescan",
+        "resolved_in_run": "awz.bxorm-1795783735",
+        "reason": "The reviewed scan no longer reports a matching finding for the current archive."
+      }
     },
     {
       "journal_finding_id": "JF-00078",
       "fingerprint": "c15f9c6f4b7a766f73e11989bf1e8c97",
       "type": "IDOR",
       "severity": "medium",
-      "status": "open",
+      "status": "fixed",
       "first_seen_run_id": "awz.bxorm-1795748238",
       "last_seen_run_id": "awz.bxorm-1795748238",
-      "resolved_run_id": null,
+      "resolved_run_id": "awz.bxorm-1795783735",
       "original_location": {
         "file": "lib/api/controller/mcp/tools.php",
         "line": "1792-1858"
       },
-      "current_location": {
-        "file": "lib/api/controller/mcp/tools.php",
-        "line": "1792-1858"
-      },
+      "current_location": null,
       "latest_vulnerability": {
         "file": "lib/api/controller/mcp/tools.php",
         "line": "1792-1858",
@@ -5833,26 +5864,34 @@
             "line": "1792-1858"
           },
           "status": "open"
+        },
+        {
+          "run_id": "awz.bxorm-1795783735",
+          "event": "resolved",
+          "at": "2026-11-27T09:55:17+00:00",
+          "status": "fixed"
         }
-      ]
+      ],
+      "resolution": {
+        "type": "not_reproduced_after_rescan",
+        "resolved_in_run": "awz.bxorm-1795783735",
+        "reason": "The reviewed scan no longer reports a matching finding for the current archive."
+      }
     },
     {
       "journal_finding_id": "JF-00079",
       "fingerprint": "6d7894525873b358ffdaf59556b125fd",
       "type": "IDOR",
       "severity": "medium",
-      "status": "open",
+      "status": "fixed",
       "first_seen_run_id": "awz.bxorm-1795748238",
       "last_seen_run_id": "awz.bxorm-1795748238",
-      "resolved_run_id": null,
+      "resolved_run_id": "awz.bxorm-1795783735",
       "original_location": {
         "file": "lib/api/controller/mcp/tools.php",
         "line": "1985-2054"
       },
-      "current_location": {
-        "file": "lib/api/controller/mcp/tools.php",
-        "line": "1985-2054"
-      },
+      "current_location": null,
       "latest_vulnerability": {
         "file": "lib/api/controller/mcp/tools.php",
         "line": "1985-2054",
@@ -5884,26 +5923,34 @@
             "line": "1985-2054"
           },
           "status": "open"
+        },
+        {
+          "run_id": "awz.bxorm-1795783735",
+          "event": "resolved",
+          "at": "2026-11-27T09:55:17+00:00",
+          "status": "fixed"
         }
-      ]
+      ],
+      "resolution": {
+        "type": "not_reproduced_after_rescan",
+        "resolved_in_run": "awz.bxorm-1795783735",
+        "reason": "The reviewed scan no longer reports a matching finding for the current archive."
+      }
     },
     {
       "journal_finding_id": "JF-00080",
       "fingerprint": "e3f4a7db9a53ad25a07d1b3093d85847",
       "type": "Command Injection",
       "severity": "low",
-      "status": "open",
+      "status": "fixed",
       "first_seen_run_id": "awz.bxorm-1795748238",
       "last_seen_run_id": "awz.bxorm-1795748238",
-      "resolved_run_id": null,
+      "resolved_run_id": "awz.bxorm-1795783735",
       "original_location": {
         "file": "lib/api/controller/mcp/tools.php",
         "line": "1011-1031"
       },
-      "current_location": {
-        "file": "lib/api/controller/mcp/tools.php",
-        "line": "1011-1031"
-      },
+      "current_location": null,
       "latest_vulnerability": {
         "file": "lib/api/controller/mcp/tools.php",
         "line": "1011-1031",
@@ -5935,26 +5982,34 @@
             "line": "1011-1031"
           },
           "status": "open"
+        },
+        {
+          "run_id": "awz.bxorm-1795783735",
+          "event": "resolved",
+          "at": "2026-11-27T09:55:17+00:00",
+          "status": "fixed"
         }
-      ]
+      ],
+      "resolution": {
+        "type": "not_reproduced_after_rescan",
+        "resolved_in_run": "awz.bxorm-1795783735",
+        "reason": "The reviewed scan no longer reports a matching finding for the current archive."
+      }
     },
     {
       "journal_finding_id": "JF-00081",
       "fingerprint": "beb77381a6b93479a87ff3762c334448",
       "type": "Open Redirect",
       "severity": "medium",
-      "status": "open",
+      "status": "fixed",
       "first_seen_run_id": "awz.bxorm-1795748238",
       "last_seen_run_id": "awz.bxorm-1795748238",
-      "resolved_run_id": null,
+      "resolved_run_id": "awz.bxorm-1795783735",
       "original_location": {
         "file": "lib/api/controller/mcp/tools.php",
         "line": "1354"
       },
-      "current_location": {
-        "file": "lib/api/controller/mcp/tools.php",
-        "line": "1354"
-      },
+      "current_location": null,
       "latest_vulnerability": {
         "file": "lib/api/controller/mcp/tools.php",
         "line": "1354",
@@ -5986,26 +6041,34 @@
             "line": "1354"
           },
           "status": "open"
+        },
+        {
+          "run_id": "awz.bxorm-1795783735",
+          "event": "resolved",
+          "at": "2026-11-27T09:55:17+00:00",
+          "status": "fixed"
         }
-      ]
+      ],
+      "resolution": {
+        "type": "not_reproduced_after_rescan",
+        "resolved_in_run": "awz.bxorm-1795783735",
+        "reason": "The reviewed scan no longer reports a matching finding for the current archive."
+      }
     },
     {
       "journal_finding_id": "JF-00082",
       "fingerprint": "c982fc622fe7e66ada1e4a78effa5df7",
       "type": "Information Disclosure",
       "severity": "low",
-      "status": "open",
+      "status": "fixed",
       "first_seen_run_id": "awz.bxorm-1795748238",
       "last_seen_run_id": "awz.bxorm-1795748238",
-      "resolved_run_id": null,
+      "resolved_run_id": "awz.bxorm-1795783735",
       "original_location": {
         "file": "lib/api/controller/mcp/tools.php",
         "line": "1011-1031"
       },
-      "current_location": {
-        "file": "lib/api/controller/mcp/tools.php",
-        "line": "1011-1031"
-      },
+      "current_location": null,
       "latest_vulnerability": {
         "file": "lib/api/controller/mcp/tools.php",
         "line": "1011-1031",
@@ -6037,26 +6100,34 @@
             "line": "1011-1031"
           },
           "status": "open"
+        },
+        {
+          "run_id": "awz.bxorm-1795783735",
+          "event": "resolved",
+          "at": "2026-11-27T09:55:17+00:00",
+          "status": "fixed"
         }
-      ]
+      ],
+      "resolution": {
+        "type": "not_reproduced_after_rescan",
+        "resolved_in_run": "awz.bxorm-1795783735",
+        "reason": "The reviewed scan no longer reports a matching finding for the current archive."
+      }
     },
     {
       "journal_finding_id": "JF-00083",
       "fingerprint": "eff598aeb587c603f4d34dd487165dbf",
       "type": "Information Disclosure",
       "severity": "low",
-      "status": "open",
+      "status": "fixed",
       "first_seen_run_id": "awz.bxorm-1795748238",
       "last_seen_run_id": "awz.bxorm-1795748238",
-      "resolved_run_id": null,
+      "resolved_run_id": "awz.bxorm-1795783735",
       "original_location": {
         "file": "lib/api/controller/mcp/tools.php",
         "line": "1121-1133"
       },
-      "current_location": {
-        "file": "lib/api/controller/mcp/tools.php",
-        "line": "1121-1133"
-      },
+      "current_location": null,
       "latest_vulnerability": {
         "file": "lib/api/controller/mcp/tools.php",
         "line": "1121-1133",
@@ -6088,26 +6159,34 @@
             "line": "1121-1133"
           },
           "status": "open"
+        },
+        {
+          "run_id": "awz.bxorm-1795783735",
+          "event": "resolved",
+          "at": "2026-11-27T09:55:17+00:00",
+          "status": "fixed"
         }
-      ]
+      ],
+      "resolution": {
+        "type": "not_reproduced_after_rescan",
+        "resolved_in_run": "awz.bxorm-1795783735",
+        "reason": "The reviewed scan no longer reports a matching finding for the current archive."
+      }
     },
     {
       "journal_finding_id": "JF-00084",
       "fingerprint": "b133c6d3bfb73157cfee324fcd6717e4",
       "type": "Information Disclosure",
       "severity": "low",
-      "status": "open",
+      "status": "fixed",
       "first_seen_run_id": "awz.bxorm-1795748238",
       "last_seen_run_id": "awz.bxorm-1795748238",
-      "resolved_run_id": null,
+      "resolved_run_id": "awz.bxorm-1795783735",
       "original_location": {
         "file": "lib/api/controller/mcp/tools.php",
         "line": "1105-1114"
       },
-      "current_location": {
-        "file": "lib/api/controller/mcp/tools.php",
-        "line": "1105-1114"
-      },
+      "current_location": null,
       "latest_vulnerability": {
         "file": "lib/api/controller/mcp/tools.php",
         "line": "1105-1114",
@@ -6139,26 +6218,34 @@
             "line": "1105-1114"
           },
           "status": "open"
+        },
+        {
+          "run_id": "awz.bxorm-1795783735",
+          "event": "resolved",
+          "at": "2026-11-27T09:55:17+00:00",
+          "status": "fixed"
         }
-      ]
+      ],
+      "resolution": {
+        "type": "not_reproduced_after_rescan",
+        "resolved_in_run": "awz.bxorm-1795783735",
+        "reason": "The reviewed scan no longer reports a matching finding for the current archive."
+      }
     },
     {
       "journal_finding_id": "JF-00085",
       "fingerprint": "f50abc4c6e32953998a04450ce6c2f39",
       "type": "Information Disclosure",
       "severity": "low",
-      "status": "open",
+      "status": "fixed",
       "first_seen_run_id": "awz.bxorm-1795748238",
       "last_seen_run_id": "awz.bxorm-1795748238",
-      "resolved_run_id": null,
+      "resolved_run_id": "awz.bxorm-1795783735",
       "original_location": {
         "file": "lib/api/controller/mcp/tools.php",
         "line": "1088-1098"
       },
-      "current_location": {
-        "file": "lib/api/controller/mcp/tools.php",
-        "line": "1088-1098"
-      },
+      "current_location": null,
       "latest_vulnerability": {
         "file": "lib/api/controller/mcp/tools.php",
         "line": "1088-1098",
@@ -6190,26 +6277,34 @@
             "line": "1088-1098"
           },
           "status": "open"
+        },
+        {
+          "run_id": "awz.bxorm-1795783735",
+          "event": "resolved",
+          "at": "2026-11-27T09:55:17+00:00",
+          "status": "fixed"
         }
-      ]
+      ],
+      "resolution": {
+        "type": "not_reproduced_after_rescan",
+        "resolved_in_run": "awz.bxorm-1795783735",
+        "reason": "The reviewed scan no longer reports a matching finding for the current archive."
+      }
     },
     {
       "journal_finding_id": "JF-00086",
       "fingerprint": "c9939ec594995b8cd4fcaab3b3dc9972",
       "type": "Information Disclosure",
       "severity": "low",
-      "status": "open",
+      "status": "fixed",
       "first_seen_run_id": "awz.bxorm-1795748238",
       "last_seen_run_id": "awz.bxorm-1795748238",
-      "resolved_run_id": null,
+      "resolved_run_id": "awz.bxorm-1795783735",
       "original_location": {
         "file": "lib/api/controller/mcp/tools.php",
         "line": "987-1004"
       },
-      "current_location": {
-        "file": "lib/api/controller/mcp/tools.php",
-        "line": "987-1004"
-      },
+      "current_location": null,
       "latest_vulnerability": {
         "file": "lib/api/controller/mcp/tools.php",
         "line": "987-1004",
@@ -6239,6 +6334,680 @@
           "location": {
             "file": "lib/api/controller/mcp/tools.php",
             "line": "987-1004"
+          },
+          "status": "open"
+        },
+        {
+          "run_id": "awz.bxorm-1795783735",
+          "event": "resolved",
+          "at": "2026-11-27T09:55:17+00:00",
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "type": "not_reproduced_after_rescan",
+        "resolved_in_run": "awz.bxorm-1795783735",
+        "reason": "The reviewed scan no longer reports a matching finding for the current archive."
+      }
+    },
+    {
+      "journal_finding_id": "JF-00087",
+      "fingerprint": "3a7b8fea896bc863629aedfc843905cd",
+      "type": "Authentication Bypass",
+      "severity": "medium",
+      "status": "open",
+      "first_seen_run_id": "awz.bxorm-1795783735",
+      "last_seen_run_id": "awz.bxorm-1795783735",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/api/filters/appauth.php",
+        "line": "95-108"
+      },
+      "current_location": {
+        "file": "lib/api/filters/appauth.php",
+        "line": "95-108"
+      },
+      "latest_vulnerability": {
+        "file": "lib/api/filters/appauth.php",
+        "line": "95-108",
+        "type": "Authentication Bypass",
+        "severity": "medium",
+        "description": "Подтверждённая эскалация авторизации через pipe-разделитель в API-ключе: если токен имеет формат 'USER_ID|TOKEN', код на строках 95–108 извлекает USER_ID через explode('|') и вызывает global $USER; $USER->Authorize($userId), аутентифицируя оператора как произвольный USER_ID без проверки, что данный пользователь владеет этим токеном. Механизм проверяет только $key == checkServiceKey(appId, key) — один валидный хук TOKEN + любой существующий ACTIVE user ID = полная компрометация сессии. Получив любой валидный app hook TOKEN, злоумышленник может получить доступ к любой учётной записью сайта (достаточно знать ACTIVE пользователя). Требует аутентификации (наличие валидного TOKEN).",
+        "recommendation": "Удалить блок strpos/explode/Authorize полностью или реализовать проверку принадлежности: токен должен принадлежать указанному userId (например, хранить hash(appId+userId) или вести mapping token→owner_id в таблице hooks).",
+        "fix": "Удалить условия strpos(key,'|'), explode('|') и вызов USER->Authorize(). Использовать токен напрямую для проверки через checkServiceKey без привязки к конкретному userId.",
+        "reviewed": {
+          "oldSeverity": "medium",
+          "newSeverity": "medium",
+          "changed": false,
+          "category": "authenticated-or-limited-authorization-bypass",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "verify-on-latest-version",
+          "confidence": "medium",
+          "rationale": "Set to medium because the finding describes authorization bypass or privilege misuse, but not a direct high-impact IDOR, financial bug, or confirmed account takeover in the journal text."
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz.bxorm-1795783735",
+          "event": "detected",
+          "at": "2026-11-27T09:55:17+00:00",
+          "location": {
+            "file": "lib/api/filters/appauth.php",
+            "line": "95-108"
+          },
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00088",
+      "fingerprint": "08f6b65c27465cdd3ef0a49bd7eaaff6",
+      "type": "IDOR",
+      "severity": "medium",
+      "status": "open",
+      "first_seen_run_id": "awz.bxorm-1795783735",
+      "last_seen_run_id": "awz.bxorm-1795783735",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1792-1858"
+      },
+      "current_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1792-1858"
+      },
+      "latest_vulnerability": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1792-1858",
+        "type": "IDOR",
+        "severity": "medium",
+        "description": "Подтверждённая массовая запись свойств инфоблока через buildElementFields: параметр fields декодируется из JSON/массива и все ключи PROPERTY_<КОД> записываются напрямую в arFields без фильтрации по допустимым свойствам целевого инфоблока (строки 1835-1842). Это затрагивает additemAction (1899-1931) и updateitemfieldsAction (1939-1978). Авторизованный MCP-клиент может задавать любые PROPERTY_* ключи, включая скрытые и технические свойства любого инфоблока, к которому есть доступ через хук. В отличие от updateitemprop (который проверяет CIBlock::GetProperties), bulk-методы не верифицируют существование свойств перед записью.",
+        "recommendation": "Перед добавлением каждого PROPERTY_* ключа проверить его существование через CIBlockProperty::GetList по IBLOCK_ID элемента. Отклонить ключи, не существующие у целевого инфоблока.",
+        "fix": "Заменить цикл foreach на проверку: получить разрешённые коды свойств инфоблока через CIBlockProperty::GetList(iblockId); принять только те PROPERTY_* ключи, которые есть в этом списке.",
+        "reviewed": {
+          "oldSeverity": "medium",
+          "newSeverity": "medium",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz.bxorm-1795783735",
+          "event": "detected",
+          "at": "2026-11-27T09:55:17+00:00",
+          "location": {
+            "file": "lib/api/controller/mcp/tools.php",
+            "line": "1792-1858"
+          },
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00089",
+      "fingerprint": "f5953213970e90be8cb2f5fc22c8058a",
+      "type": "IDOR",
+      "severity": "medium",
+      "status": "open",
+      "first_seen_run_id": "awz.bxorm-1795783735",
+      "last_seen_run_id": "awz.bxorm-1795783735",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1985-2054"
+      },
+      "current_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1985-2054"
+      },
+      "latest_vulnerability": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1985-2054",
+        "type": "IDOR",
+        "severity": "medium",
+        "description": "Подтверждённая массовая запись произвольных полей раздела через buildSectionFields: параметр fields распаковывается как JSON/массив, все ключи кроме явно заблокированных (IBLOCK_ID, ID, NAME, IBLOCK_SECTION_ID, CODE, ACTIVE, PICTURE, DETAIL_PICTURE, GLOBAL_ACTIVE, DEPTH_LEVEL, LEFT_MARGIN, RIGHT_MARGIN, TIMESTAMP_X, MODIFIED_BY, SORT, DESCRIPTION_TYPE) передаются напрямую в arFields (строка 2054). Включая любые UF_* пользовательские свойства, позволяя модифицировать произвольные пользовательские поля любого раздела инфоблока. Затрагивает addsectionAction (2100-2131) и updatesectionAction (2140-2182).",
+        "recommendation": "Для UF_* использовать CIBlock::GetUserFields(IBLOCK_ID, 'SECTION') для получения allowlist существующих UF-полей и принимать только те ключи, которые есть в нём.",
+        "fix": "Добавить вызов CIBlock::GetUserFields перед merge полей: ufAllowed = array_keys(getUserFields(...)); filter fields where key starts with 'UF_' AND key in ufAllowed.",
+        "reviewed": {
+          "oldSeverity": "medium",
+          "newSeverity": "medium",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz.bxorm-1795783735",
+          "event": "detected",
+          "at": "2026-11-27T09:55:17+00:00",
+          "location": {
+            "file": "lib/api/controller/mcp/tools.php",
+            "line": "1985-2054"
+          },
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00090",
+      "fingerprint": "2d14972e04cd52e48a1537ae9aff9713",
+      "type": "Open Redirect",
+      "severity": "medium",
+      "status": "open",
+      "first_seen_run_id": "awz.bxorm-1795783735",
+      "last_seen_run_id": "awz.bxorm-1795783735",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1354"
+      },
+      "current_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1354"
+      },
+      "latest_vulnerability": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1354",
+        "type": "Open Redirect",
+        "severity": "medium",
+        "description": "Подозрение: saveBase64Image формирует публичный URL через Application::getInstance()->getContext()->getRequest()->getHttpHost() (строка 1354): return 'https://'.getHttpHost().'/'.$relativeDir.$fileName. getHttpHost() берётся из Host HTTP-заголовка, который может быть подменён через Host header injection. Злоумышленник может отправить запрос с Custom-Host: evil.com, получить ссылку, которая визуально принадлежит сайту, но ведёт на чужой домен. Возвращаемые URL используются клиентами MCP как ссылки на загруженные изображения. На практике: в браузере это работает через поддельный Host header, в MCP-контексте — при отправке запросов к подконтрольному серверу.",
+        "recommendation": "Использовать Option::get('main', 'site_domain') или фиксированный config вместо динамического HTTP_HOST.",
+        "fix": "Заменить getRequest()->getHttpHost() на trim((string)Option::get('main','site_domain','')) ?: $_SERVER['HTTP_HOST']",
+        "reviewed": {
+          "oldSeverity": "medium",
+          "newSeverity": "medium",
+          "changed": false,
+          "category": "open-redirect-unclear-source",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "validate-source-and-allowlist",
+          "confidence": "low",
+          "rationale": "Left as medium pending confirmation of whether the redirect target is request-controlled or only editable by trusted administrators."
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz.bxorm-1795783735",
+          "event": "detected",
+          "at": "2026-11-27T09:55:17+00:00",
+          "location": {
+            "file": "lib/api/controller/mcp/tools.php",
+            "line": "1354"
+          },
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00091",
+      "fingerprint": "f957f7578d5b5883dbdb7dcdc6550b5e",
+      "type": "Command Injection",
+      "severity": "low",
+      "status": "open",
+      "first_seen_run_id": "awz.bxorm-1795783735",
+      "last_seen_run_id": "awz.bxorm-1795783735",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1018-1020"
+      },
+      "current_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1018-1020"
+      },
+      "latest_vulnerability": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1018-1020",
+        "type": "Command Injection",
+        "severity": "low",
+        "description": "Подтверждённый вызов OS-команд top, free, nproc через shell_exec в processinfoAction. Функции вызываются только если shell_exec не отключена в disable_functions. Строки жёстко захардкожены ('top -b -n 1', 'free -m', 'nproc') — пользовательский ввод отсутствует, эксплуатация невозможна напрямую. Однако сам паттерн exec присутствует в коде модуля и доступен авторизованному MCP-клиенту. Если shell_exec когда-либо будет содержать переменную ввода — станет эксплуатируемым RCE.",
+        "recommendation": "Заменить shell_exec на безопасные PHP-аналоги: sys_getloadavg() для нагрузки, file_get_contents('/proc/meminfo') для памяти, file_get_contents('/proc/cpuinfo') для CPU cores.",
+        "fix": "Убрать @shell_exec('top -b -n 1'); @shell_exec('free -m'); @shell_exec('nproc'); заменить на /proc/ чтение через file_get_contents и sys_getloadavg().",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "low",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz.bxorm-1795783735",
+          "event": "detected",
+          "at": "2026-11-27T09:55:17+00:00",
+          "location": {
+            "file": "lib/api/controller/mcp/tools.php",
+            "line": "1018-1020"
+          },
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00092",
+      "fingerprint": "ba0c8ca54feb6396f0093aa6b2e35bb8",
+      "type": "Information Disclosure",
+      "severity": "low",
+      "status": "open",
+      "first_seen_run_id": "awz.bxorm-1795783735",
+      "last_seen_run_id": "awz.bxorm-1795783735",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "987-1004"
+      },
+      "current_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "987-1004"
+      },
+      "latest_vulnerability": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "987-1004",
+        "type": "Information Disclosure",
+        "severity": "low",
+        "description": "Подтверждено раскрытие информации о CMS через cmsinfoAction: SM_VERSION (версия Битрикс), Option::get('~license_name') (редакция/лицензия), список установленных модулей с версиями. Всё доступно любому авторизованному MCP-клиенту.",
+        "recommendation": "Не отдавать версию CMS и лицензию — оставить только список модулей без версий.",
+        "fix": "Убрать SM_VERSION и license_name из вывода cmsinfoAction.",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "low",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz.bxorm-1795783735",
+          "event": "detected",
+          "at": "2026-11-27T09:55:17+00:00",
+          "location": {
+            "file": "lib/api/controller/mcp/tools.php",
+            "line": "987-1004"
+          },
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00093",
+      "fingerprint": "064ce48ffe9e9d25d6d93958ba4851c7",
+      "type": "Information Disclosure",
+      "severity": "low",
+      "status": "open",
+      "first_seen_run_id": "awz.bxorm-1795783735",
+      "last_seen_run_id": "awz.bxorm-1795783735",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1088-1098"
+      },
+      "current_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1088-1098"
+      },
+      "latest_vulnerability": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1088-1098",
+        "type": "Information Disclosure",
+        "severity": "low",
+        "description": "Подтверждено раскрытие информации о БД через dbinfoAction: connection.getType() (тип СУБД), getVersion() (версия MySQL/MariaDB), getHost() (hostname DB-сервера), getDatabase() (имя базы данных). Эта информация полезна для подготовки targeted атак на БД. Доступно любому авторизованному MCP-клиенту.",
+        "recommendation": "Не отдавать hostname и version — оставить только type и database name.",
+        "fix": "Убрать строки connection->getHost() и current(connection->getVersion()) из dbinfoAction.",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "low",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz.bxorm-1795783735",
+          "event": "detected",
+          "at": "2026-11-27T09:55:17+00:00",
+          "location": {
+            "file": "lib/api/controller/mcp/tools.php",
+            "line": "1088-1098"
+          },
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00094",
+      "fingerprint": "c6573d39d58aea19fea65daad09b9262",
+      "type": "Information Disclosure",
+      "severity": "low",
+      "status": "open",
+      "first_seen_run_id": "awz.bxorm-1795783735",
+      "last_seen_run_id": "awz.bxorm-1795783735",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1105-1114"
+      },
+      "current_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1105-1114"
+      },
+      "latest_vulnerability": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1105-1114",
+        "type": "Information Disclosure",
+        "severity": "low",
+        "description": "Подтверждено раскрытие информации о PHP через phpinfoAction: version (версия PHP), extensions (полный список расширений), memoryLimit, maxExecutionTime. Всё доступно авторизованному MCP-клиенту.",
+        "recommendation": "Ограничить вывод минимально необходимой для диагностики информацией.",
+        "fix": "Не возвращать список extensions — оставить только версию PHP и критичные ini-параметры.",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "low",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz.bxorm-1795783735",
+          "event": "detected",
+          "at": "2026-11-27T09:55:17+00:00",
+          "location": {
+            "file": "lib/api/controller/mcp/tools.php",
+            "line": "1105-1114"
+          },
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00095",
+      "fingerprint": "80f3a9cd2ada61d855abad5aae82e4d2",
+      "type": "Information Disclosure",
+      "severity": "low",
+      "status": "open",
+      "first_seen_run_id": "awz.bxorm-1795783735",
+      "last_seen_run_id": "awz.bxorm-1795783735",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1121-1133"
+      },
+      "current_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1121-1133"
+      },
+      "latest_vulnerability": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1121-1133",
+        "type": "Information Disclosure",
+        "severity": "low",
+        "description": "Подтверждено раскрытие информации об окружении через envinfoAction: php_uname() раскрывает полную версию ОС, gethostname() — имя сервера, get_current_user() — имя системного пользователя веб-сервера, disk_total_space/disk_free_space — размеры диска. Все доступны авторизованному MCP-клиенту.",
+        "recommendation": "Удалить get_current_user() и php_uname(). Оставить только общую информацию о диске.",
+        "fix": "Удалить строки с php_uname(), gethostname(), get_current_user().",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "low",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz.bxorm-1795783735",
+          "event": "detected",
+          "at": "2026-11-27T09:55:17+00:00",
+          "location": {
+            "file": "lib/api/controller/mcp/tools.php",
+            "line": "1121-1133"
+          },
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00096",
+      "fingerprint": "1ea9434c6a12a2ae845efd749f671c76",
+      "type": "Insecure Deserialization",
+      "severity": "low",
+      "status": "open",
+      "first_seen_run_id": "awz.bxorm-1795783735",
+      "last_seen_run_id": "awz.bxorm-1795783735",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/api/filters/sign.php",
+        "line": "45-46"
+      },
+      "current_location": {
+        "file": "lib/api/filters/sign.php",
+        "line": "45-46"
+      },
+      "latest_vulnerability": {
+        "file": "lib/api/filters/sign.php",
+        "line": "45-46",
+        "type": "Insecure Deserialization",
+        "severity": "low",
+        "description": "Подтверждённый паттерн unsafe-deserialize в Sign filter: sign.php использует unserialize(base64_decode(...), ['allowed_classes' => false]) внутри Sign filter после проверки подписи Bitrix Security\\Sign\\Signer. allowed_classes=false предотвращает POP-цепочки, но паттерн сохраняется. При изменении кода (например удалении проверки подписи) это станет эксплуатируемой уязвимостью. Дополнительно — тот же паттерн в appauth.php:43 (signed параметр).",
+        "recommendation": "Заменить serialize/unserialize на json_encode/json_decode для передачи параметров через signed-пакет.",
+        "fix": "Заменить base64_encode(serialize($params)) на base64_encode(json_encode($params)), и unserialize(...) на json_decode(base64_decode(...), true).",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "low",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz.bxorm-1795783735",
+          "event": "detected",
+          "at": "2026-11-27T09:55:17+00:00",
+          "location": {
+            "file": "lib/api/filters/sign.php",
+            "line": "45-46"
+          },
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00097",
+      "fingerprint": "501fcbc0c3ce7bd644d57b59045bf83d",
+      "type": "Cross-Site Scripting",
+      "severity": "low",
+      "status": "open",
+      "first_seen_run_id": "awz.bxorm-1795783735",
+      "last_seen_run_id": "awz.bxorm-1795783735",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/api/filters/nocors.php",
+        "line": "33-39"
+      },
+      "current_location": {
+        "file": "lib/api/filters/nocors.php",
+        "line": "33-39"
+      },
+      "latest_vulnerability": {
+        "file": "lib/api/filters/nocors.php",
+        "line": "33-39",
+        "type": "Cross-Site Scripting",
+        "severity": "low",
+        "description": "Подозрение: NoCors фильтр ретранслирует Origin заголовок в Access-Control-Allow-Origin без валидации (nocors.php:37). Код отражает входной Origin напрямую ($response->addHeader('Access-Control-Allow-Origin', $origin)) или ставит '*' если Origin отсутствует. Хотя все конечные action-методы проходят через AppAuth (токен-проверка), что ограничивает круг потенциальных атакующих, сам паттерн CORS misconfiguration позволяет любому сайту отправлять запросы с credentials (authorization headers) к этому API. По severity-rubric.md reflected XSS = medium, но здесь воздействие ограничено auth-зоной.",
+        "recommendation": "Валидировать Origin против allowlist известных доменов или использовать реферируемый origin для сравнения.",
+        "fix": "Проверять origin через parse_url и сравнивать host с известным списком доменов модуля/сайта.",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "low",
+          "changed": false,
+          "category": "xss-unclear-source",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "validate-source-and-fix-escaping",
+          "confidence": "low",
+          "rationale": "Adjusted conservatively because the journal does not clearly prove a low-privileged or public payload source. Confirm source permissions before treating as a blocker."
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz.bxorm-1795783735",
+          "event": "detected",
+          "at": "2026-11-27T09:55:17+00:00",
+          "location": {
+            "file": "lib/api/filters/nocors.php",
+            "line": "33-39"
+          },
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00098",
+      "fingerprint": "04d3a83a9fd39e8b0eb8d24ead488e38",
+      "type": "CSRF",
+      "severity": "medium",
+      "status": "open",
+      "first_seen_run_id": "awz.bxorm-1795783735",
+      "last_seen_run_id": "awz.bxorm-1795783735",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "144-145"
+      },
+      "current_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "144-145"
+      },
+      "latest_vulnerability": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "144-145",
+        "type": "CSRF",
+        "severity": "medium",
+        "description": "Подозрение: state-changing MCP actions (log_set, log_clear, additem, updateitemfields, addsection, updatesection, orderstatus, orderpay и др.) не имеют пресета HttpMethod(POST) prefiltres. Проверка $this->getRequest()->isPost() используется только в Hook::checkCallParams и BxMcp::callrpcAction для специфических маршрутов. Большинство actions в Tools могут быть вызваны GET-запросом. При этом все маршруты защищены AppAuth (токенная авторизация), что снижает CSRF риск до уровня authenticated-only.",
+        "recommendation": "Добавить new HttpMethod([METHOD_POST]) для всех state-changing actions или проверять isPost() в начале каждого метода.",
+        "fix": "В configureActions добавить 'prefilters' => [..., new \\Bitrix\\Main\\Engine\\ActionFilter\\HttpMethod([\\Bitrix\\Main\\Engine\\ActionFilter\\HttpMethod::METHOD_POST])] для всех мутирующих действий.",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "medium",
+          "changed": true,
+          "category": "csrf-state-change",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "add-sessid-and-owner-checks",
+          "confidence": "medium",
+          "rationale": "Kept as medium because the finding describes state change without check_bitrix_sessid; raise only if cross-user deletion or higher-impact state change is confirmed."
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz.bxorm-1795783735",
+          "event": "detected",
+          "at": "2026-11-27T09:55:17+00:00",
+          "location": {
+            "file": "lib/api/controller/mcp/tools.php",
+            "line": "144-145"
+          },
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "journal_finding_id": "JF-00099",
+      "fingerprint": "9d9ad49f16f1dd8cac0dec058eba130f",
+      "type": "Information Disclosure",
+      "severity": "low",
+      "status": "open",
+      "first_seen_run_id": "awz.bxorm-1795783735",
+      "last_seen_run_id": "awz.bxorm-1795783735",
+      "resolved_run_id": null,
+      "original_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "477-550"
+      },
+      "current_location": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "477-550"
+      },
+      "latest_vulnerability": {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "477-550",
+        "type": "Information Disclosure",
+        "severity": "low",
+        "description": "Подозрение: log_setAction принимает параметр params, который частично сливается в exception_handling конфигурацию .settings.php (строки 653-663). Ключи кроме class_name/settings/log/debug/name/arguments записываются напрямую в верхний уровень exception_handling ($logConfig[$key] = $val). Атакующий с доступом к tools/log_set может изменить настройки логирования системы, например установить debug=false для подавления аудита, или передать нестандартные параметры, которые попадут в файл конфигурации. Также параметр class_name позволяет установить любой класс обработчика лога (без проверки существования).",
+        "recommendation": "Жёсткий allowlist допустимых ключей в params для логики exception_handling, проверка class_name против известного allowlist классов битрикс логгеров.",
+        "fix": "Вместо '$logConfig[$key] = $val' проверять ключ по whitelist [$log_size, log_error, log_file_size, date_format, trace_format, format, settings]; class_name проверять через preg_match('/^[\\\\](Bitrix|Awz)/', $className).",
+        "reviewed": {
+          "oldSeverity": "low",
+          "newSeverity": "low",
+          "changed": false,
+          "category": "kept-as-reported",
+          "versionScope": "current",
+          "version": "current",
+          "currentVersionRelevance": "present-in-current-scan",
+          "action": "fix",
+          "confidence": "medium",
+          "rationale": "Severity left unchanged after review; no stronger Bitrix/BUS-specific downgrade condition was identified from the journal text alone."
+        }
+      },
+      "events": [
+        {
+          "run_id": "awz.bxorm-1795783735",
+          "event": "detected",
+          "at": "2026-11-27T09:55:17+00:00",
+          "location": {
+            "file": "lib/api/controller/mcp/tools.php",
+            "line": "477-550"
           },
           "status": "open"
         }
