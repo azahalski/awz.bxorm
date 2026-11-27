@@ -76,6 +76,25 @@ class Helper {
     }
 
     /**
+     * Действия MCP-контроллера, включаемые ПО УМОЛЧАНИЮ в штатное MCP-приложение.
+     * Финансовые/мутирующие инструменты заказов (orders, orderget, orderstatus, orderpay)
+     * в дефолт не входят — их включают вручную в админке (Методы → PARAMS.methods),
+     * чтобы дефолтный токен MCP не давал операции над заказами.
+     * @return string[]
+     */
+    public static function getMcpDefaultActions(): array
+    {
+        return array_values(array_filter(self::getMcpActions(), function($code){
+            return !in_array($code, [
+                'tools/orders',
+                'tools/orderget',
+                'tools/orderstatus',
+                'tools/orderpay',
+            ], true);
+        }));
+    }
+
+    /**
      * ID метода MCP-сервера (0 - если не создан)
      */
     public static function getMcpMethodId(): int
@@ -115,7 +134,7 @@ class Helper {
             'MODULES' => ['main'],
             'ACTIVE' => 'Y',
             'PARAMS' => [
-                'methods' => array_fill_keys(self::getMcpActions(), 'Y'),
+                'methods' => array_fill_keys(self::getMcpDefaultActions(), 'Y'),
                 'fields' => []
             ]
         ];

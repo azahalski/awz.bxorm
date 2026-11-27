@@ -2035,8 +2035,13 @@ class Tools extends App
             foreach($fields as $key=>$val){
                 $key = strtoupper((string)$key);
                 if($key === '' || in_array($key, ['IBLOCK_ID', 'ID', 'NAME',
-                    'IBLOCK_SECTION_ID', 'CODE', 'ACTIVE', 'PICTURE', 'DETAIL_PICTURE', 'SORT', 'GLOBAL_ACTIVE',
+                    'IBLOCK_SECTION_ID', 'CODE', 'ACTIVE', 'PICTURE', 'DETAIL_PICTURE', 'GLOBAL_ACTIVE',
                     'DEPTH_LEVEL', 'LEFT_MARGIN', 'RIGHT_MARGIN', 'TIMESTAMP_X', 'MODIFIED_BY'], true)){
+                    continue;
+                }
+                if($key === 'SORT'){
+                    //SORT разрешен: приведение к int, ноль не пропускаем
+                    $arFields['SORT'] = (int)$val;
                     continue;
                 }
                 //DESCRIPTION/DESCRIPTION_TYPE: явная передача перекрывает авто-детект html/text
@@ -2539,7 +2544,7 @@ class Tools extends App
                     ),
                     'fields' => new DTO\Tool\PropertySchema(
                         type: 'string',
-                        description: 'Доп. поля — JSON-строка, например {"UF_DESCRIPTION":"Текст","SORT":100}. UF_<КОД> — значение пользовательского свойства раздела. DESCRIPTION/DESCRIPTION_TYPE (text|html) — перекрывают автоматическое определение типа описания.'
+                        description: 'Доп. поля — JSON-строка, например {"UF_DESCRIPTION":"Текст","SORT":100}. UF_<КОД> — значение пользовательского свойства раздела, SORT — порядок сортировки (число). DESCRIPTION/DESCRIPTION_TYPE (text|html) — перекрывают автоматическое определение типа описания.'
                     ),
                 ],
                 'required' => ['iblock_id', 'name']
@@ -3172,19 +3177,31 @@ class Tools extends App
             if(empty($changed)){
                 return ['content'=>[['type'=>'text','text'=>'Оплата не найдена: #'.$paymentId]], 'isError'=>true];
             }
-            //дата оплаты (ядро при setPaid её на заказе не проставляет)
-            if($paid === 'Y'){
-                $r = $order->setField('DATE_PAYED', new \Bitrix\Main\Type\DateTime());
-                if(!$r->isSuccess()){
-                    return ['content'=>[['type'=>'text','text'=>'Ошибка установки даты оплаты: '.implode('; ', $r->getErrorMessages())]], 'isError'=>true];
-                }
-            }
             $r = $order->save();
             if(!$r->isSuccess()){
                 return ['content'=>[['type'=>'text','text'=>'Ошибка сохранения заказа: '.implode('; ', $r->getErrorMessages())]], 'isError'=>true];
             }
 
-            return ['content'=>[['type'=>'text','text'=>'Заказ #'.$orderId.': paid='.$paid.', оплаты: '.implode(', ', $changed)]]];
+            //дата оплаты: проставляем ПОСЛЕ сохранения (валидатор CRM-заказа требует уже PAYED=Y),
+            //best-effort — сбой даты не отменяет установленную оплату
+            $dateNote = '';
+            if($paid === 'Y'){
+                try{
+                    $r = $order->setField('DATE_PAYED', new \Bitrix\Main\Type\DateTime());
+                    if($r->isSuccess()){
+                        $r = $order->save();
+                        if(!$r->isSuccess()){
+                            $dateNote = ' (DATE_PAYED не проставлен: '.implode('; ', $r->getErrorMessages()).')';
+                        }
+                    }else{
+                        $dateNote = ' (DATE_PAYED не проставлен: '.implode('; ', $r->getErrorMessages()).')';
+                    }
+                }catch(\Throwable $e){
+                    $dateNote = ' (DATE_PAYED не проставлен: '.$e->getMessage().')';
+                }
+            }
+
+            return ['content'=>[['type'=>'text','text'=>'Заказ #'.$orderId.': paid='.$paid.', оплаты: '.implode(', ', $changed).$dateNote]]];
         }catch(\Throwable $e){
             return ['content'=>[['type'=>'text','text'=>'tool orderpay error: '.$e->getMessage()]], 'isError'=>true];
         }
