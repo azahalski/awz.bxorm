@@ -1,65 +1,47 @@
 {
   "success": true,
-  "requestId": "awz.bxorm-1795712065",
+  "requestId": "awz.bxorm-1795748238",
   "data": {
     "vulnerabilities": [
       {
         "file": "lib/api/filters/appauth.php",
-        "line": "95-101",
-        "type": "IDOR",
-        "severity": "medium",
-        "description": "Подтверждена эскалация авторизации через pipe-разделитель в API-ключе: при формате ключа 'USER_ID|TOKEN' метод explode делит строку и вызывает global $USER; $USER->Authorize($userAr[0]), аутентифицируя оператора как произвольный USER_ID без проверки, что данный пользователь владеет этим токеном. Получивший любой валидный хук TOKEN может получить доступ к любой учётной записи сайта.",
-        "recommendation": "Удалить блок strpos/explode/Authorize из appauth.php либо изменить формат хранения ключей так, чтобы Authorize вызывался только с userId владельца токена (хранить hash(appId+userId) и проверять соответствие).",
+        "line": "95-108",
+        "type": "Authentication Bypass",
+        "severity": "high",
+        "description": "Подтверждённая эскалация авторизации через pipe-разделитель в API-ключе: если токен имеет формат 'USER_ID|TOKEN', код на строках 95–108 извлекает USER_ID через explode('|') и вызывает global $USER; $USER->Authorize($userAr[0]), аутентифицируя оператора как произвольный USER_ID без проверки, что данный пользователь владеет этим токеном. Получив любой валидный хук TOKEN, злоумышленник может получить доступ к любой учётной записи сайта (достаточно знать ACTIVE пользователя). Механизм проверяет только $r['TOKEN'] == $key — один валидный токен + любой существующий user ID = полная компрометация сессии.",
+        "recommendation": "Либо убрать блок strpos/explode/Authorize полностью, либо реализовать проверку принадлежности: токен должен принадлежать указанному userId (например, хранить hash(appId+userId) или вести mapping token→owner_id в таблице hooks).",
         "fix": "Удалить условия strpos(key,'|'), explode('|') и вызов USER->Authorize(). Использовать токен напрямую для проверки через checkServiceKey без привязки к конкретному userId."
       },
       {
         "file": "lib/api/controller/mcp/tools.php",
-        "line": "1702-1722",
+        "line": "1792-1858",
         "type": "IDOR",
         "severity": "medium",
-        "description": "Подтверждённая массовая запись свойств инфоблока через additem/updateitemfields: параметр fields декодируется из JSON/массива, все ключи вида PROPERTY_<КОД> записываются напрямую в arFields без фильтрации по списку допустимых свойств целевого инфоблока. Авторизованный пользователь может задавать любые PROPERTY_*, включая скрытые, технические свойства других инфоблоков (если код совпадает), а также SYSTEM-свойства вроде PREVIEW_TEXT, CODE.",
+        "description": "Подтверждённая массовая запись свойств инфоблока через buildElementFields: параметр fields декодируется из JSON/массива и все ключи PROPERTY_<КОД> записываются напрямую в arFields без фильтрации по допустимым свойствам целевого инфоблока. Это затрагивает additemAction (строки 1899-1931) и updateitemfieldsAction (1939-1978). Авторизованный MCP-клиент может задавать любые PROPERTY_*, включая скрытые и технические свойства, если их код совпадает со свойством какого-либо инфоблока. В отличие от updateitemprop (который проверяет CIBlock::GetProperties), bulk-методы не верифицируют существование свойств перед записью.",
         "recommendation": "Перед добавлением каждого PROPERTY_*-ключа проверить его существование через CIBlockProperty::GetList по IBLOCK_ID элемента. Отклонить ключи, не существующие у целевого инфоблока.",
-        "fix": "Заменить цикл foreach на проверку: получить разрешённые коды свойств инфоблока, принять только те PROPERTY_* ключи, которые есть в этом списке."
+        "fix": "Заменить цикл foreach на проверку: получить разрешённые коды свойств инфоблока через CIBlockProperty::GetList(iblockId, [], []); принять только те PROPERTY_* ключи, которые есть в этом списке."
       },
       {
         "file": "lib/api/controller/mcp/tools.php",
-        "line": "1894-1911",
+        "line": "1985-2054",
         "type": "IDOR",
         "severity": "medium",
-        "description": "Подтверждённая массовая запись пользовательских свойств раздела (UF_*) через addsection/updatesection: параметр fields распаковывается как JSON/массив, все ключи кроме явно заблокированных (IBLOCK_ID, ID, NAME, DESCRIPTION и т.д.) передаются напрямую в arFields. Включая любые UF_* свойства с любой типизацией, позволяя изменить произвольные пользовательские поля раздела.",
-        "recommendation": "Для UF_* — использовать CIBlock::GetUserFields(IBLOCK_ID, 'SECTION') для получения allowlist существующих UF-полей и принимать только те ключи, которые есть в нём.",
-        "fix": "Добавить вызов CIBiblock::GetUserFields перед merge полей: ufAllowed = array_keys(getUserFields(...)); filter fields where key starts with 'UF_' AND key in ufAllowed."
+        "description": "Подтверждённая массовая запись произвольных полей раздела через buildSectionFields: параметр fields распаковывается как JSON/массив, все ключи кроме явно заблокированных (IBLOCK_ID, ID, NAME, DESCRIPTION и т.д.) передаются напрямую в arFields. Включая любые UF_* пользовательские свойства, SORT и другие нестандартные поля, позволяя модифицировать произвольные пользовательские поля любого раздела.",
+        "recommendation": "Для UF_* использовать CIBlock::GetUserFields(IBLOCK_ID, 'SECTION') для получения allowlist существующих UF-полей и принимать только те ключи, которые есть в нём.",
+        "fix": "Добавить вызов CIBlock::GetUserFields перед merge полей: ufAllowed = array_keys(getUserFields(...)); filter fields where key starts with 'UF_' AND key in ufAllowed."
       },
       {
         "file": "lib/api/controller/mcp/tools.php",
-        "line": "2660-2678",
-        "type": "SQL Injection",
-        "severity": "medium",
-        "description": "Подозрение: SQLi через ORM-фильтр в ordersAction: параметр filter читается из запроса, декодируется из JSON, и каждая пара key/value добавляется напрямую в фильтр OrderTable::getList(). Ключи фильтруются regex /^(>=|<=|<>|>|<|=|!|~|%)?[\\w.]+$/i, но значения не проходят приведение типа — значение числового оператора (>ID, <ID) передаётся как строка/смешанный тип в ORM-запрос, что может привести к некорректному SQL-предложению.",
-        "recommendation": "Привести значения ID-фильтров к int, добавить type-checking для numeric-операторов.",
-        "fix": "Добавить if (in_array(substr(trim($key),0,2), ['>', '<'])): val = (int)$val;"
-      },
-      {
-        "file": "lib/api/controller/mcp/tools.php",
-        "line": "971-973",
+        "line": "1011-1031",
         "type": "Command Injection",
         "severity": "low",
-        "description": "Подтверждён вызов OS-команд top, free, nproc через shell_exec в processinfoAction. Функции вызываются только если shell_exec не отключена в disable_functions. Строки жёстко захардкожены ('top -b -n 1', 'free -m', 'nproc') — пользовательский ввод отсутствует, эксплуатация невозможна. Однако сам паттерн exec присутствует в коде модуля.",
+        "description": "Подтверждённый вызов OS-команд top, free, nproc через shell_exec в processinfoAction. Функции вызываются только если shell_exec не отключена в disable_functions. Строки жёстко захардкожены ('top -b -n 1', 'free -m', 'nproc') — пользовательский ввод отсутствует, эксплуатация невозможна напрямую. Однако сам паттерн exec присутствует в коде модуля и доступен авторизованному MCP-клиенту.",
         "recommendation": "Заменить shell_exec на безопасные PHP-аналоги: sys_getloadavg() для нагрузки, file_get_contents('/proc/meminfo') для памяти, file_get_contents('/proc/cpuinfo') для CPU cores.",
-        "fix": "Убрать @shell_exec('top -b -n 1'); @shell_exec('free -m'); @shell_exec('nproc'); заменить на /proc/ чтение."
+        "fix": "Убрать @shell_exec('top -b -n 1'); @shell_exec('free -m'); @shell_exec('nproc'); заменить на /proc/ чтение через file_get_contents и sys_getloadavg()."
       },
       {
         "file": "lib/api/controller/mcp/tools.php",
-        "line": "749-839, 248",
-        "type": "Path Traversal",
-        "severity": "low",
-        "description": "Подтверждён паттерн чтения файлов в file_get/log_clear с realpath-проверкой + whitelist/blacklist. Механизм checkFileReadAllowed блокирует .settings.php, dbconn.php, .env, битrix/backup/, upload/bak/. Но опция mcp_file_whitelist (параметр модуля) позволяет администратору добавлять произвольные каталоги, расширяя зону читаемых файлов. Если путь попадает в whitelist — проверка на бинарные файлы и исполняемые скрипты отсутствует.",
-        "recommendation": "Добавить extension blacklist (.php, .inc, .phtml) и content-type проверку при чтении файлов. Либо запретить чтение файлов с расширением .php даже в whitelisted директориях.",
-        "fix": "В checkFileReadAllowed добавить: if (preg_match('/\\.(php|inc|phtml)$/i', basename($real))) return 'чтение PHP-файлов запрещено';"
-      },
-      {
-        "file": "lib/api/controller/mcp/tools.php",
-        "line": "1293",
+        "line": "1354",
         "type": "Open Redirect",
         "severity": "low",
         "description": "Подозрение: saveBase64Image формирует публичный URL через getHttpHost(), которое можно подменить через Host header. URL возвращается в ответе loadphoto/tmpphoto как ссылка на загруженное изображение ('https://'.getHttpHost().'/'.$relativeDir.$fileName). Злоумышленник может отправить запрос с Custom-Host: evil.com, получить ссылку, которая визуально принадлежит сайту, но ведёт на чужой домен.",
@@ -68,7 +50,16 @@
       },
       {
         "file": "lib/api/controller/mcp/tools.php",
-        "line": "1078",
+        "line": "1011-1031",
+        "type": "Information Disclosure",
+        "severity": "low",
+        "description": "Подтверждено раскрытие информации о нагрузке сервера через processinfoAction: вывод команд top, free, nproc через shell_exec раскрывает загрузку CPU, объём памяти и число ядер. Также phpinfoAction раскрывает версию PHP, расширения, memoryLimit, maxExecutionTime.",
+        "recommendation": "Ограничить вывод обобщённой информацией без системных деталей. Использовать sys_getloadavg() вместо shell_exec.",
+        "fix": "Заменить shell_exec на sys_getloadavg() и чтение /proc/meminfo через file_get_contents. Ограничить phpinfoAction выводом минимально необходимой информации."
+      },
+      {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1121-1133",
         "type": "Information Disclosure",
         "severity": "low",
         "description": "Подтверждено раскрытие информации об окружении через envinfoAction: php_uname() раскрывает полную версию ОС, gethostname() — имя сервера, get_current_user() — имя системного пользователя веб-сервера, disk_total_space/disk_free_space — размеры диска. Все доступны любому авторизованному MCP-клиенту.",
@@ -77,12 +68,30 @@
       },
       {
         "file": "lib/api/controller/mcp/tools.php",
-        "line": "1043",
+        "line": "1105-1114",
+        "type": "Information Disclosure",
+        "severity": "low",
+        "description": "Подтверждено раскрытие информации о PHP через phpinfoAction: version (версия PHP), extensions (список расширений), memoryLimit, maxExecutionTime. Доступно авторизованному MCP-клиенту.",
+        "recommendation": "Ограничить вывод минимально необходимой для диагностики информацией.",
+        "fix": "Не возвращать список extensions — оставить только версию PHP и критичные ini-параметры."
+      },
+      {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "1088-1098",
         "type": "Information Disclosure",
         "severity": "low",
         "description": "Подтверждено раскрытие информации о БД через dbinfoAction: connection.getType() (тип СУБД), getVersion() (версия MySQL/MariaDB), getHost() (hostname DB-сервера), getDatabase() (имя базы данных). Эта информация полезна для подготовки targeted атак на БД.",
-        "recommendation": "Не отдавать hostname и version — оставить только type и database name (не критично для атаки).",
+        "recommendation": "Не отдавать hostname и version — оставить только type и database name.",
         "fix": "Убрать строки connection->getHost() и current(connection->getVersion()) из dbinfoAction."
+      },
+      {
+        "file": "lib/api/controller/mcp/tools.php",
+        "line": "987-1004",
+        "type": "Information Disclosure",
+        "severity": "low",
+        "description": "Подтверждено раскрытие информации о CMS через cmsinfoAction: SM_VERSION (версия Битрикс), Option::get('~license_name') (редакция/лицензия), список установленных модулей с версиями. Всё доступно авторизованному MCP-клиенту.",
+        "recommendation": "Не отдавать версию CMS и лицензию — оставить только список модулей без версий.",
+        "fix": "Убрать SM_VERSION и license_name из вывода cmsinfoAction."
       },
       {
         "file": "lib/api/filters/sign.php",
@@ -94,29 +103,39 @@
         "fix": "Заменить base64_encode(serialize($params)) на base64_encode(json_encode($params)), и unserialize(...) на json_decode(base64_decode(...), true)."
       }
     ],
-    "summary": "Модуль awz.bxorm содержит 10 подтверждённых находок безопасности: 0 high, 4 medium, 6 low. Основная группа уязвимостей — массовая запись (mass assignment) в инструментах iblock через необработанный JSON-параметр fields (tools.php:1702-1722, tools.php:1894-1911), позволяющий модифицировать произвольные PROPERTY_/UF_* свойства любого инфоблока/раздела. Также: IDOR через pipe-разделитель токена в appauth.php (эскалация до любого userId), потенциальная SQLi через ORM-фильтр ordersAction, path traversal shadow через mcp_file_whitelist, open redirect через Host header, information disclosure (OS/DB/user info), hardcoded OS-команды и insecure deserialization pattern.",
-    "scannedFiles": 78,
-    "riskLevel": "medium",
+    "summary": "Модуль awz.bxorm содержит 11 подтверждённых находок безопасности: 1 high, 2 medium, 8 low. Критическая уязвимость — Authentication Bypass в appauth.php:95-108, где pipe-разделитель токена позволяет авторизоваться как произвольный user ID, получая полный контроль над любой учётной записью. Группа IDOR через массовую запись необработанных JSON-полей в iblock (tools.php:buildElementFields и buildSectionFields) позволяет модифицировать произвольные PROPERTY_/UF_* свойства. Также: Command Injection через shell_exec (hardcoded OS commands), Open Redirect через Host header, Information Disclosure (OS/PHP/DB/CMS info в пяти action-методах), Insecure Deserialization pattern в sign.php.",
+    "scannedFiles": 79,
+    "riskLevel": "high",
     "auditedFiles": [
       "lib/api/controller/app.php",
-      "lib/api/controller/hook.php",
       "lib/api/controller/bxmcp.php",
-      "lib/api/controller/mcp/tools.php",
+      "lib/api/controller/hook.php",
       "lib/api/controller/mcp/app.php",
       "lib/api/controller/mcp/prompts.php",
       "lib/api/controller/mcp/resources.php",
+      "lib/api/controller/mcp/tools.php",
+      "lib/api/filters/appauth.php",
+      "lib/api/filters/checkmethod.php",
+      "lib/api/filters/checktool.php",
+      "lib/api/filters/nocors.php",
+      "lib/api/filters/publicscope.php",
+      "lib/api/filters/rpccheck.php",
+      "lib/api/filters/sign.php",
       "lib/hooks.php",
       "lib/methods.php",
       "lib/helper.php",
-      "lib/api/filters/appauth.php",
-      "lib/api/filters/sign.php",
-      "lib/api/filters/checkmethod.php",
-      "lib/api/scopes/controller.php",
-      "options.php",
       "lib/adminpages/hooksedit.php",
+      "lib/adminpages/hookslist.php",
       "lib/adminpages/methodsedit.php",
+      "lib/adminpages/methodslist.php",
+      "options.php",
+      "admin/hooks_edit.php",
+      "admin/hooks_list.php",
+      "admin/methods_edit.php",
+      "admin/methods_list.php",
       "include.php",
       "install/index.php",
+      "lib/api/scopes/controller.php",
       "lib/api/filters/request/replacefilter.php"
     ]
   }
